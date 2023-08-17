@@ -20,6 +20,12 @@ You're standing at the heart of the island's mystery, the place where the curse 
 
 📢 "As the ritual begins, the chamber comes to life. The symbols on the walls glow brighter, the ground shakes, and the spectral figures surge forward, forming a swirling vortex of energy.
 
+_Suddenly, spectral figures materialize from the gloom. They are ghostly apparitions, their forms shimmering and translucent, like mist given form. Their eyes glow with an eerie light, casting an unnatural glow in the dark ruins._
+
+_These spectral figures are the tormented souls of those who failed to solve the riddle, forever trapped in the ruins. They move with an otherworldly grace, their feet barely touching the ground. Their hands end in sharp, claw-like appendages, and they emit a haunting, mournful wail that echoes through the ruins._
+
+_The spectral figures are a chilling sight, their faces twisted in eternal torment. They are not of this world, but of a realm beyond, a realm of sorrow and despair. As they approach, the air grows colder, and a sense of dread fills the room. The players must defend themselves while solving the riddle, adding another layer of challenge to their quest._
+
 `Sam`, the first wave of spectral figures break away from the vortex and charge towards you. You stand your ground, ready to protect `Emily` and `Liz`. (Roll D6 + STR)
 
 With the first wave defeated, `Liz`, you notice a pattern in the spectral attacks and the glowing symbols. You quickly devise a plan to use the symbols to repel the spectral figures and buy some time. (Roll D6 + INT)
@@ -28,7 +34,7 @@ With the first wave defeated, `Liz`, you notice a pattern in the spectral attack
 
 But the island isn't done fighting. `Sam`, a larger, more powerful spectral figure emerges from the vortex and charges at you. You brace for impact, ready to hold the line. (Roll D6 + STR)
 
-`Liz`, you notice that this figure is directly connected to the vortex. You quickly search the mural for a way to sever this connection. (Roll D6 + INT)
+`Liz`, you notice that this figure is directly connected to the vortex. You quickly search the mural for a way to sever this connection. (Roll D6 + INT) (**Make Them Laugh**)
 
 `Emily`, you feel a surge in the talisman's energy as the large figure attacks. You try to redirect this energy to aid `Sam` and `Liz`. (Roll D6 + INT)
 
