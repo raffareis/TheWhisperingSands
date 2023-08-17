@@ -44,7 +44,7 @@ Hint: This riddle suggests that the player needs to speak the name of something 
 
 
 ### The Door Guardian
-"I am the Keeper of Laughter, the Guardian of Joy," it intones in a voice as old as the ruins. "To pass through this door and lift the curse, you must bring light to these dark halls. Tell me a tale that tickles the ribs, a jest that brings joy. Speak a joke that echoes with laughter through these ancient walls, and I shall grant you passage. Fail, and remain forever in the shadows of despair. Now, adventurer, make me laugh!"
+"I am the Keeper of Laughter, the Guardian of Joy, To pass through this door and lift the curse, you must bring light to these dark halls. Tell me a tale that tickles the ribs, a jest that brings joy. Speak a joke that echoes with laughter through these ancient walls, and I shall grant you passage. Fail, and remain forever in the shadows of despair. Now, adventurer, make me laugh!"
 
 
 ## More Puzzles
