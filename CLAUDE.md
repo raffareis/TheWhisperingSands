@@ -40,6 +40,10 @@ WebSocket e restringir criação de mesas antes de expor a API paga.
 
 `bin/check-live.ts` e `bin/check-workers.ts` são provas explícitas com chamadas pagas. Não executá-la
 em testes comuns. Reutilizar prova válida e investigar falhas antes de repetir.
+`bin/compare-fal.ts` é experimento pago, sem alterar o provedor ativo da mesa.
+`FAL_KEY` vem de configuração privada. Exemplos e limites observados no README.
+Edição do frame prévio não prova qualidade de uma composição nova. Guardar outputs
+somente em `output/verification/fal/`, nunca cartões ou mapa entre as referências.
 Navegador de prova usa GPU real, conforme a regra herdada do workshop.
 
 ## Restrições de jogo

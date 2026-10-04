@@ -248,6 +248,54 @@ novas; não repete voz ou os helpers já verificados. Para reproduzi-la explicit
 node --env-file=.env --import tsx bin/check-workers.ts --sunburst-scene
 ```
 
+### Experimento fal.ai
+
+Em 2026-10-04, sete gerações explícitas compararam a mesma composição com quatro
+referências Sunburst e pequenas edições de um frame já aprovado. O script usa
+`fal.run` diretamente, sem polling nem retry automático; chave apenas no
+ambiente privado. Tempos incluem resposta e arquivo salvo, mas não o preflight
+único de referências públicas (0,27–0,45 s).
+
+| Modelo / operação | Resolução real | Tempo observado | Inspeção |
+| --- | --- | --- | --- |
+| Flare / composição anterior | 1536×1024 | 15,541 s | Boa textura e personagens; referência de outra rodada. |
+| Klein 4B / quatro referências | 1536×1024 | 6,568 s; 5,994 s inline | Na segunda tentativa duplicou Liz; gestos/objetos inconsistentes. |
+| Klein 9B / quatro referências | 1536×1024 | 6,904 s; 5,957 s inline | Mais rápido, mas alterou idade/rosto de Liz e ignorou direção do gesto. |
+| Flux 2 Turbo / quatro referências | 1536×1024 | 22,101 s | Gesto mais fiel; sem ganho de velocidade nesta amostra. |
+| Klein 9B / edição do frame aprovado | 1536×1024 | 5,614 s inline | Três personagens e textura preservados melhor; Emily abaixou o braço. |
+| Klein 9B / mesma edição menor | 1024×704 | 6,062 s inline | Qualidade útil para o painel; não reduziu o tempo total nesta chamada. |
+
+A redução de resolução foi pedida como 1024×688; o endpoint entregou 1024×704.
+A inferência caiu de 1,367 s para 0,860 s, mas o restante da chamada dominou o
+tempo. Não medimos separadamente rede, pré-processamento e serialização.
+São amostras isoladas, sem p50/p95 nem custo faturado verificado.
+
+Recomendação: manter Sunburst no banco base e Flare para novas composições ou
+mudanças grandes; experimentar Klein 9B para pequenas atualizações usando o
+último frame aprovado. A edição reaproveita uma composição Flare existente e
+não prova capacidade de montar uma cena nova com a mesma qualidade. O app
+continua usando Flare; a fal.ai está somente no experimento [#3](https://github.com/raffareis/TheWhisperingSands/issues/3).
+
+```bash
+# Chamadas pagas explícitas, no máximo três por execução:
+node --env-file=/caminho/privado/fal.env --import tsx bin/compare-fal.ts \
+  --label=comparacao-nova
+# Requer a prova prévia check-workers --sunburst-scene e seu frame local:
+node --env-file=/caminho/privado/fal.env --import tsx bin/compare-fal.ts \
+  --models=klein-9b --label=edicao-nova --scene=continuation --inline=true
+```
+
+`FAL_KEY` deve estar no arquivo privado. Resultados, hashes, request IDs, prompts
+e imagens ficam em `output/verification/fal/`, ignorado pelo Git. Checkpoints
+recusam repetir chamadas pendentes/falhas ou reutilizar saídas alteradas. Para
+reusar um resultado após outro commit, `--revision=<SHA completo>` fixa a revisão
+das referências. Nenhum cartão de jogador ou mapa privado entra no experimento.
+
+Documentação: [Klein 4B](https://fal.ai/models/fal-ai/flux-2/klein/4b/edit/api),
+[Klein 9B](https://fal.ai/models/fal-ai/flux-2/klein/9b/edit/api),
+[Turbo](https://fal.ai/models/fal-ai/flux-2/turbo/edit/api) e
+[chamada direta](https://fal.ai/docs/documentation/model-apis/inference/synchronous).
+
 Referências consultadas: [conversas Realtime](https://developers.openai.com/api/docs/guides/realtime-conversations),
 [imagens e referências](https://developers.openai.com/api/docs/guides/image-generation),
 [Flare](https://developers.openai.com/api/docs/models/gpt-image-2.5-flare),

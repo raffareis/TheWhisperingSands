@@ -73,6 +73,13 @@ export function availableReferences(state: RoomState, catalog = readCatalog()) {
     })
     .slice(0, 4);
 }
+export function illustrationPrompt(
+  snapshot: RoomState,
+  catalog: Catalog,
+  references: Asset[],
+) {
+  return `Create a NEW scene illustration, using the supplied images as visual references, not a collage. ${catalog.style?.description ?? "Grounded painterly maritime adventure."} Public scene: ${snapshot.scene.title}, ${snapshot.scene.location}. ${snapshot.scene.description}. References: ${references.map((a) => `${a.id}: ${a.visual_description}`).join("; ")}. No text, letters, puzzle answers, UI, or unencountered events. Keep character identities and material design consistent.`;
+}
 // Narrow semantic selection is optional, off the voice critical path, never a game-rule oracle.
 export async function selectReference(
   text: string,
@@ -394,7 +401,7 @@ export class BackgroundWorkers {
       references = references.filter(
         (a) => a.role !== "environment" || a.id === selected,
       );
-    const prompt = `Create a NEW scene illustration, using the supplied images as visual references, not a collage. ${catalog.style?.description ?? "Grounded painterly maritime adventure."} Public scene: ${snapshot.scene.title}, ${snapshot.scene.location}. ${snapshot.scene.description}. References: ${references.map((a) => `${a.id}: ${a.visual_description}`).join("; ")}. No text, letters, puzzle answers, UI, or unencountered events. Keep character identities and material design consistent.`;
+    const prompt = illustrationPrompt(snapshot, catalog, references);
     const form = new FormData();
     form.set("model", this.settings.imageModel);
     form.set("prompt", prompt);
