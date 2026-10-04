@@ -1,0 +1,26 @@
+{
+  "generated_at": "2026-10-04",
+  "mode": "built-in imagegen",
+  "assets": [
+    {
+      "file": "shipwreck.png",
+      "use_case": "illustration-story",
+      "prompt": "Use case: illustration-story\nAsset type: opening scene illustration for The Whispering Sands, a cooperative RPG for two people.\nPrimary request: Illustrate the opening location after a violent storm has wrecked a small boat on an uncharted tropical island. View from the beach: wet dark sand, scattered wooden boat fragments and ropes in the foreground, surf and towering cliffs, dense palms and ancient carvings partly visible on a weathered tree at the forest edge. Dawn is breaking after the storm; warm sunlight threads through moody clouds and sea mist.\nStyle/medium: beautiful cinematic painterly adventure concept art, detailed atmospheric environment, grounded survival mystery, subtle brush texture, rich deep teal shadows and warm sand and copper highlights.\nComposition/framing: wide landscape composition, strong depth, no interface elements, environment only with no people; the players will appear in the game interface separately.\nConstraints: no talisman, no ghosts, no future story spoilers, no lettering, no logos, no watermarks."
+    },
+    {
+      "file": "sam.png",
+      "use_case": "illustration-story",
+      "prompt": "Use case: illustration-story\nAsset type: character portrait for the cooperative island RPG The Whispering Sands.\nStyle: cinematic painterly adventure concept art, grounded realism, rich muted teal shadows and warm copper highlights, subtle brush texture. Vertical chest-up portrait with the character centered, face clearly visible in the upper half, tropical island foliage and sea mist softly out of focus behind them. Wear weathered practical clothes after a boating storm; expressive and human, not a superhero. No text, borders, interface, logos or watermark.\nSubject: Samuel (Sam), a fictional middle-aged man, former military officer turned outdoor adventure guide. Rugged kind face, short salt-and-pepper hair, stubble, worn olive field shirt. Calm alert expression, resilient protector of his family."
+    },
+    {
+      "file": "liz.png",
+      "use_case": "illustration-story",
+      "prompt": "Use case: illustration-story\nAsset type: character portrait for the cooperative island RPG The Whispering Sands.\nStyle: cinematic painterly adventure concept art, grounded realism, rich muted teal shadows and warm copper highlights, subtle brush texture. Vertical chest-up portrait with the character centered, face clearly visible in the upper half, tropical island foliage and sea mist softly out of focus behind them. Wear weathered practical clothes after a boating storm; expressive and human, not a superhero. No text, borders, interface, logos or watermark.\nSubject: Elizabeth (Liz), a fictional middle-aged archaeologist. Thoughtful curious face, brown hair tied back loosely with strands loosened by the storm, practical light linen field shirt. Confident and warm, looking toward a mystery just outside the frame."
+    },
+    {
+      "file": "emily.png",
+      "use_case": "illustration-story",
+      "prompt": "Use case: illustration-story\nAsset type: character portrait for the cooperative island RPG The Whispering Sands.\nStyle: cinematic painterly adventure concept art, grounded realism, rich muted teal shadows and warm copper highlights, subtle brush texture. Vertical chest-up portrait with the character centered, face clearly visible in the upper half, tropical island foliage and sea mist softly out of focus behind them. Wear weathered practical clothes after a boating storm; expressive and human, not a superhero. No text, borders, interface, logos or watermark.\nSubject: Emily, a fictional sixteen-year-old girl on an island adventure with her parents. Practical teal outdoor jacket, loose brown ponytail, curious brave expression, natural age-appropriate appearance, fully clothed. She is an ordinary teenager in a family survival story."
+    }
+  ]
+}
