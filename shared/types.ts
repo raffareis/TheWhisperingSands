@@ -45,6 +45,7 @@ export interface Roll extends Check {
 }
 export interface Scene {
   id: string;
+  locationId?: string;
   title: string;
   location: string;
   description: string;
@@ -80,6 +81,8 @@ export interface RoomState {
   puzzleView?: PuzzleView | null;
   workers?: WorkerJob[];
   learningNotes?: { id: string; text: string; sceneId: string }[];
+  partyChat?: { id: string; playerId: string; text: string; at: string }[];
+  ending?: { choice: "confront" | "forgive" | "leave"; rescued: boolean };
   phase: "lobby" | "playing" | "complete";
 }
 export interface Credentials {
@@ -99,12 +102,14 @@ export interface LiveState {
   imageEnabled: boolean;
   error?: string;
   presence: Presence[];
+  partySpeaker?: string | null;
 }
 export interface Configuration {
   aiAvailable: boolean;
   realtimeModel: string;
   imageModel: string;
   imageEditModel: string | null;
+  hostAccessRequired?: boolean;
 }
 
 export interface PuzzleProgress {
@@ -113,6 +118,7 @@ export interface PuzzleProgress {
   attempts: number;
   hintCount: number;
   solved: boolean;
+  rewardGranted?: boolean;
 }
 export interface PuzzleView {
   id: string;
@@ -128,6 +134,7 @@ export interface PuzzleView {
   solved: boolean;
   attempts: number;
   reward: string | null;
+  glossary?: { term: string; meaning: string }[];
 }
 export interface WorkerJob {
   id: string;

@@ -6,6 +6,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import WebSocket, { WebSocketServer } from "ws";
+import { puzzles } from "../server/puzzles.js";
 import { RoomStore } from "../server/store.js";
 import { RoomRuntime } from "../server/runtime.js";
 import { rollCheck, acceptRoll } from "../server/game.js";
@@ -62,8 +63,14 @@ test(
       ws.on("message", (raw) => {
         const e = JSON.parse(raw.toString());
         incoming.push(e);
-        if (e.type === "session.update")
+        if (e.type === "session.update") {
+          assert.equal(
+            e.session.type,
+            "realtime",
+            "Every GA session update requires its type, including context refreshes.",
+          );
           ws.send(JSON.stringify({ type: "session.updated" }));
+        }
       });
     });
     async function client(player: typeof a) {
@@ -92,26 +99,26 @@ test(
       assert.equal(
         one.events.find((e) => e.type === "state").state.puzzleView
           .evidenceTitle,
-        "Water-damaged equipment glossary",
+        puzzles[0].sam.title,
       );
       assert.equal(
         two.events.find((e) => e.type === "state").state.puzzleView
           .evidenceTitle,
-        "Quartermaster's shipping ledger",
+        puzzles[0].liz.title,
       );
-      assert.ok(!JSON.stringify(one.events).includes("Label 2 · 480 g"));
-      assert.ok(
-        !JSON.stringify(two.events).includes(
-          "FLINT — a stone that produces sparks",
-        ),
-      );
+      assert.ok(!JSON.stringify(one.events).includes(puzzles[0].liz.lines[0]));
+      assert.ok(!JSON.stringify(two.events).includes(puzzles[0].sam.lines[0]));
       await Promise.all([room.startVoice(a), room.startVoice(b)]);
       assert.equal(connections, 1);
       assert.equal(room.live.dmStatus, "ready");
       const config = incoming.find((e) => e.type === "session.update").session;
       assert.equal(config.audio.input.format.rate, 24000);
       assert.equal(config.audio.input.turn_detection, null);
-      assert.equal(config.tools.length, 4);
+      assert.ok(
+        config.tools.some(
+          (tool: { name: string }) => tool.name === "finish_rescue",
+        ),
+      );
       await room.action(a, "I try to move the heavy wreckage.");
       await until(() => incoming.some((e) => e.type === "response.create"));
       emit({ type: "response.created", response: { id: "r1" } });
@@ -141,6 +148,15 @@ test(
       await until(() =>
         incoming.some((e) => e.item?.type === "function_call_output"),
       );
+      const continuationIndex = incoming.findLastIndex(
+        (e) => e.type === "response.create",
+      );
+      assert.equal(incoming[continuationIndex - 1].type, "session.update");
+      assert.ok(
+        incoming[continuationIndex - 1].session.instructions.includes(
+          room.state.pendingCheck!.id,
+        ),
+      );
       const toolOutput = incoming.find(
         (e) => e.item?.type === "function_call_output",
       );
@@ -151,6 +167,28 @@ test(
         response: { id: "r2", status: "completed", output: [] },
       });
       await until(() => room.live.dmStatus === "ready");
+      const responsesBeforePuzzle = incoming.filter(
+        (e) => e.type === "response.create",
+      ).length;
+      room.puzzleHint(room.state.puzzles![0].id);
+      await until(() => incoming.at(-1)?.type === "session.update");
+      assert.ok(incoming.at(-1).session.instructions.includes('"hintCount":1'));
+      assert.equal(
+        incoming.filter((e) => e.type === "response.create").length,
+        responsesBeforePuzzle,
+      );
+      room.puzzleAnswer(
+        a,
+        room.state.puzzles![0].id,
+        puzzles[0].sam.answers[0],
+      );
+      await until(() =>
+        incoming.at(-1)?.session?.instructions.includes('"accepted":["sam"]'),
+      );
+      assert.equal(
+        incoming.filter((e) => e.type === "response.create").length,
+        responsesBeforePuzzle,
+      );
       const result = rollCheck(
         room.state,
         a.id,
@@ -212,8 +250,83 @@ test(
       assert.ok(
         !one.events.some((e) => e.type === "audio" && e.source === a.id),
       );
+      const responsesBeforeChat = incoming.filter(
+        (e) => e.type === "response.create",
+      ).length;
+      const journalBeforeChat = room.state.journal.length;
+      room.partyChat(a, { text: "Secret evidence from Sam, for Liz only." });
+      room.live.dmStatus = "thinking";
+      room.beginPartyFloor(a);
+      assert.throws(() => room.beginPartyFloor(b), /companion is speaking/);
+      assert.throws(() => room.beginFloor(b), /companion microphone/);
+      room.partyAudio(a.id, pcm);
+      room.endPartyFloor(a.id);
+      await until(() => two.events.some((e) => e.type === "party_audio"));
+      assert.ok(!one.events.some((e) => e.type === "party_audio"));
+      assert.equal(room.state.journal.length, journalBeforeChat);
+      assert.equal(room.live.dmStatus, "thinking");
+      assert.equal(
+        incoming.filter((e) => e.type === "response.create").length,
+        responsesBeforeChat,
+      );
+      assert.ok(
+        !incoming.some((e) =>
+          JSON.stringify(e).includes("Secret evidence from Sam"),
+        ),
+      );
+      room.live.dmStatus = "ready";
       room.toggleImages(false);
       assert.equal(store.load(r.state.id).preferences.illustrations, false);
+      room.live.dmStatus = "thinking";
+      emit({ type: "response.created", response: { id: "audio-completed" } });
+      emit({
+        type: "response.done",
+        response: { id: "audio-completed", status: "completed", output: [] },
+      });
+      await until(() => room.live.dmStatus === "ready");
+      room.state.chapter = 4;
+      room.state.puzzles![4].solved = true;
+      room.state.preferences.illustrations = false;
+      await room.action(a, "We confront the keeper and board the ferry.");
+      emit({ type: "response.created", response: { id: "rescue" } });
+      emit({
+        type: "response.done",
+        response: {
+          id: "rescue",
+          status: "completed",
+          output: [
+            {
+              type: "function_call",
+              name: "finish_rescue",
+              call_id: "finish-rescue",
+              arguments: JSON.stringify({
+                choice: "confront",
+                scene: {
+                  title: "Together aboard",
+                  location: "Ferry Quay",
+                  locationId: "ferry_quay",
+                  description:
+                    "Sam, Liz and Emily board the rescue ferry together.",
+                  edit: null,
+                },
+              }),
+            },
+          ],
+        },
+      });
+      await until(() => room.state.phase === "complete");
+      assert.deepEqual(room.state.ending, {
+        choice: "confront",
+        rescued: true,
+      });
+      await until(
+        () =>
+          incoming.at(-2)?.type === "session.update" &&
+          incoming.at(-1)?.type === "response.create",
+      );
+      assert.ok(
+        incoming.at(-2).session.instructions.includes('"rescued":true'),
+      );
     } finally {
       room.close();
       for (const ws of sockets) ws.close();
@@ -228,3 +341,181 @@ test(
     }
   },
 );
+
+test("party relay expires and disconnects without paid work; chat limits persist only public discussion", (t) => {
+  const dir = mkdtempSync(join(tmpdir(), "whispering-party-"));
+  const store = new RoomStore(dir);
+  const created = store.create("Rafael", "sam");
+  const joined = store.join(created.state.id, created.invite, "Meg");
+  let dialled = false;
+  const room = new RoomRuntime(
+    store,
+    created.state.id,
+    {
+      key: "",
+      textModel: "test",
+      realtimeModel: "test",
+      imageModel: "test",
+      dataDir: dir,
+    },
+    () => {
+      dialled = true;
+      throw new Error("No Realtime connection belongs to party audio.");
+    },
+  );
+  const a = joined.state.players[0],
+    b = joined.state.players[1];
+  const oneEvents: any[] = [],
+    twoEvents: any[] = [];
+  const fakeSocket = (events: any[]) =>
+    ({
+      readyState: WebSocket.OPEN,
+      bufferedAmount: 0,
+      send: (raw: string) => events.push(JSON.parse(raw)),
+      close: () => {},
+    }) as unknown as WebSocket;
+  const one = fakeSocket(oneEvents),
+    two = fakeSocket(twoEvents);
+  try {
+    t.mock.timers.enable({ apis: ["setTimeout"] });
+    room.connect(one, a);
+    room.connect(two, b);
+    room.beginPartyFloor(a);
+    room.partyAudio(b.id, Buffer.alloc(4800).toString("base64"));
+    room.partyAudio(a.id, "invalid!");
+    room.partyAudio(a.id, Buffer.alloc(1).toString("base64"));
+    room.partyAudio(a.id, Buffer.alloc(12002).toString("base64"));
+    assert.ok(!twoEvents.some((e) => e.type === "party_audio"));
+    room.partyAudio(a.id, Buffer.alloc(4800).toString("base64"));
+    assert.equal(twoEvents.filter((e) => e.type === "party_audio").length, 1);
+    t.mock.timers.tick(60000);
+    assert.equal(room.live.partySpeaker, null);
+    assert.ok(oneEvents.some((e) => e.type === "party_floor_released"));
+    room.beginPartyFloor(b);
+    room.disconnect(two);
+    assert.equal(room.live.partySpeaker, null);
+    room.beginPartyFloor(a);
+    room.revokeSeat(a.id);
+    assert.equal(room.live.partySpeaker, null);
+    assert.ok(oneEvents.some((e) => e.type === "seat_revoked"));
+    assert.equal(dialled, false);
+    assert.equal(room.realtime, null);
+    const journalLength = room.state.journal.length;
+    room.state.partyChat = Array.from({ length: 200 }, (_, i) => ({
+      id: `${i}`,
+      playerId: a.id,
+      text: "old",
+      at: new Date().toISOString(),
+    }));
+    room.partyChat(a, { text: "  Partner-only clue  " });
+    assert.equal(room.state.partyChat.length, 200);
+    assert.equal(room.state.partyChat.at(-1)!.text, "Partner-only clue");
+    assert.equal(
+      store.load(created.state.id).partyChat!.at(-1)!.text,
+      "Partner-only clue",
+    );
+    assert.equal(room.state.journal.length, journalLength);
+    assert.throws(() => room.partyChat(a, { text: "x".repeat(1201) }));
+    for (let i = 0; i < 19; i++) room.partyChat(a, { text: "message" });
+    assert.throws(() => room.partyChat(a, { text: "excess" }), /slow down/);
+    room.state.phase = "playing";
+    room.state.characters.forEach((c) => (c.hp = 0));
+    room.live.dmStatus = "speaking";
+    assert.throws(() => room.rest(), /storyteller/);
+    room.live.dmStatus = "offline";
+    room.rest();
+    assert.deepEqual(
+      room.state.characters.map((c) => c.hp),
+      [3, 3, 3],
+    );
+  } finally {
+    room.close();
+    store.close();
+    t.mock.timers.reset();
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("structured text rescue commits the same authoritative ending and public epilogue", async (t) => {
+  const dir = mkdtempSync(join(tmpdir(), "whispering-text-ending-"));
+  const store = new RoomStore(dir);
+  const r = store.create("Rafael", "sam");
+  store.join(r.state.id, r.invite, "Meg");
+  const room = new RoomRuntime(store, r.state.id, {
+    key: "test-key",
+    textModel: "test",
+    realtimeModel: "test",
+    imageModel: "test",
+    dataDir: dir,
+  });
+  const inputBodies: any[] = [];
+  t.mock.method(
+    globalThis,
+    "fetch",
+    async (_url: string, init: RequestInit) => {
+      inputBodies.push(JSON.parse(init.body as string));
+      return Response.json({
+        output: [
+          {
+            content: [
+              {
+                type: "output_text",
+                text: JSON.stringify({
+                  narration:
+                    "You board the ferry together, leaving the keeper without a promise to stay.",
+                  check: null,
+                  consequences: null,
+                  scene: {
+                    title: "A free departure",
+                    location: "Ferry Quay",
+                    locationId: "ferry_quay",
+                    description: "The family boards the rescue ferry together.",
+                    edit: null,
+                  },
+                  rescue: { choice: "leave" },
+                  background: [],
+                }),
+              },
+            ],
+          },
+        ],
+      });
+    },
+  );
+  try {
+    room.state.phase = "playing";
+    room.state.chapter = 4;
+    room.state.puzzles![4].solved = true;
+    room.state.preferences.illustrations = false;
+    room.partyChat(room.state.players[0], {
+      text: "PRIVATE COMPANION DISCUSSION",
+    });
+    await room.action(
+      room.state.players[0],
+      "We choose to leave and board the ferry.",
+    );
+    assert.equal(room.state.phase, "complete");
+    assert.deepEqual(store.load(r.state.id).ending, {
+      choice: "leave",
+      rescued: true,
+    });
+    assert.ok(
+      room.state.journal.some(
+        (e) => e.kind === "system" && e.text.includes("without reconciliation"),
+      ),
+    );
+    assert.ok(
+      room.state.journal.some(
+        (e) => e.kind === "dm" && e.text.includes("board the ferry"),
+      ),
+    );
+    assert.equal(inputBodies.length, 1);
+    assert.ok(
+      !JSON.stringify(inputBodies).includes("PRIVATE COMPANION DISCUSSION"),
+    );
+  } finally {
+    room.close();
+    store.close();
+    rmSync(dir, { recursive: true, force: true });
+  }
+});

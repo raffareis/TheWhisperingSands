@@ -433,6 +433,118 @@
         ],
         "output_sha256": "d94d4fc52cb2f35b9c948cebca6dd76ab0cbd47f10b95c3894e8e6ab874caa1e"
       }
+    },
+    {
+      "id": "inventory-specimens",
+      "path": "/art/inventory-specimens-sunburst.webp",
+      "role": "inventory-sheet",
+      "tags": ["inventory", "specimens", "gouache"],
+      "visual_description": "Nine isolated inventory specimens on ivory paper in a 3×3 grid. UI sprite sheet only: crop a cell for individual objects; never use the entire plate as a scene. Blank chart and brass token contain no game information.",
+      "grid": {
+        "rows": 3,
+        "columns": 3,
+        "cells": [
+          {
+            "row": 0,
+            "column": 0,
+            "subject": "flint",
+            "item_ids": ["rescue-flint"]
+          },
+          {
+            "row": 0,
+            "column": 1,
+            "subject": "folded-canvas",
+            "item_ids": ["rescue-canvas"]
+          },
+          {
+            "row": 0,
+            "column": 2,
+            "subject": "rope-coil",
+            "item_ids": ["rescue-rope"]
+          },
+          {
+            "row": 1,
+            "column": 0,
+            "subject": "compass",
+            "item_ids": ["rescue-compass"]
+          },
+          {
+            "row": 1,
+            "column": 1,
+            "subject": "blank-chart",
+            "item_ids": ["tide-chart"]
+          },
+          {
+            "row": 1,
+            "column": 2,
+            "subject": "archive-log",
+            "item_ids": ["keeper-log"]
+          },
+          {
+            "row": 2,
+            "column": 0,
+            "subject": "signal-lens",
+            "item_ids": ["signal-lens"]
+          },
+          {
+            "row": 2,
+            "column": 1,
+            "subject": "blank-brass-token",
+            "item_ids": ["word-we", "word-will", "word-find", "word-home"]
+          },
+          {
+            "row": 2,
+            "column": 2,
+            "subject": "pencil",
+            "item_ids": []
+          }
+        ]
+      },
+      "provenance": {
+        "mode": "imagegen CLI/API",
+        "model": "gpt-image-2.5-sunburst",
+        "quality": "medium",
+        "size": "1024x1024",
+        "background": "opaque",
+        "output_format": "webp",
+        "output_compression": 90,
+        "max_attempts": 1,
+        "generated_at": "2026-10-04T07:18:11.219Z",
+        "duration_ms": 20372,
+        "prompt": "Use case: illustration-story\nAsset type: public inventory specimen sprite sheet for The Whispering Sands.\nInput image 1 is ONLY a painting-style reference: borrow matte gouache, graphite, warm ivory paper, olive green, sea grey, raw umber and pale ochre. Do NOT copy its landscape, coast, trees, carvings or composition.\nCreate ONE square 1024x1024 contact sheet with exactly NINE isolated objects, arranged in an EXACT equal 3-column by 3-row grid, no gutters or drawn grid lines. Each cell occupies exactly one third of the width and height. Object centers in pixels: (171,171), (512,171), (853,171); (171,512), (512,512), (853,512); (171,853), (512,853), (853,853). Each entire object must stay within the middle 70 percent of its own cell, including all shadows. Leave clean paper between objects. Consistent softly lit top-down specimen view, no overlap.\nRow 1 left to right: a single angular dark grey flint spark stone with chipped facets; neatly folded weathered olive canvas shelter cloth; a compact coil of ochre hemp rope.\nRow 2 left to right: a small worn brass compass with an unlettered ivory face and one simple dark needle, no directional letters or numerals; a single blank ivory sheet of copied chart paper, lightly folded and salt worn, entirely unmarked, no map or symbols; a closed worn archive log book, grey-green cloth cover, cream page edges, no writing, no pencil.\nRow 3 left to right: a circular pale sea-green glass signal lens in a weathered brass rim, subtle concentric glass ridges, no glow; a single plain round brass token, completely blank on both sides, no marks or carvings; one short sharpened graphite pencil with plain olive-painted wooden barrel, diagonally centered, no writing or lettering.\nStyle: tactile matte gouache and sparse graphite on evenly colored warm ivory paper, restrained pigment, visible dry brush, credible small field objects. Strong distinct silhouettes legible as small inventory pictures. Flat quiet paper background, no scenery, no surface horizon, no frames.\nText: NONE. No words, labels, letters, numbers, glyphs, logos, watermarks, interface, puzzle clues, solutions, routes, diagrams, map, narrative or people. The chart and token must be BLANK. Only these nine objects, no extra props.",
+        "prompt_sha256": "a46ae949395ea4c4f4947c45740ba6e6c93e9989392e7681a61b4a97a8e167b3",
+        "reference_ids": ["coastal-field-study"],
+        "source_references": [
+          {
+            "path": "/art/coastal-field-study-sunburst.webp",
+            "sha256": "9dfdecd7f2b6b953d25a482e136012ccb2ba49d2c944b06d8c75acdb22287eba",
+            "role": "style-only"
+          }
+        ],
+        "metrics": [
+          {
+            "event": "image_generation_completed",
+            "job": "edit",
+            "model": "gpt-image-2.5-sunburst",
+            "elapsed_seconds": 20.184,
+            "request_id": "req_287634e6d7fa4094b10e3680ca5f9d82",
+            "usage": {
+              "input_tokens": 2061,
+              "input_tokens_details": {
+                "image_tokens": 1536,
+                "text_tokens": 525
+              },
+              "output_tokens": 439,
+              "total_tokens": 2500,
+              "output_tokens_details": {
+                "image_tokens": 439,
+                "text_tokens": 0
+              }
+            }
+          }
+        ],
+        "output_sha256": "c8662289eed8deaaf7e5dcd843c3d1e95542448b5de96a2fe23b82ce9d375e38"
+      }
     }
   ]
 }

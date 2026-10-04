@@ -3,5 +3,4 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 args=(--env-file-if-exists=.env)
 if [[ -n "${OPENAI_ENV_FILE:-}" ]]; then args+=("--env-file=$OPENAI_ENV_FILE"); fi
-if [[ -n "${FAL_ENV_FILE:-}" ]]; then args+=("--env-file=$FAL_ENV_FILE"); fi
 exec node "${args[@]}" --import tsx server/index.ts

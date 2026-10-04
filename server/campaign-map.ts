@@ -9,8 +9,10 @@ export function campaignMapContext(state: RoomState) {
     `${state.scene.title} ${state.scene.location}`.toLowerCase();
   const encountered = map.nodes.filter((n) => n.first_chapter <= state.chapter);
   const area =
+    encountered.find((n) => n.id === state.scene.locationId) ??
     encountered.find((n) => description.includes(n.label.toLowerCase())) ??
-    map.nodes.find((n) => n.id === map.chapter_anchor[state.chapter])!;
+    map.nodes.find((n) => n.id === map.chapter_anchor[state.chapter]) ??
+    map.nodes[0];
   const routes = map.edges
     .filter((e) => e.from === area.id || e.to === area.id)
     .map((e) => ({
@@ -37,7 +39,9 @@ export function campaignMapContext(state: RoomState) {
       first_chapter: n.first_chapter,
     })),
     area,
-    area_is_chapter_anchor: !description.includes(area.label.toLowerCase()),
+    area_is_chapter_anchor:
+      state.scene.locationId !== area.id &&
+      !description.includes(area.label.toLowerCase()),
     anchor_policy:
       "A chapter anchor is an orientation fallback, never proof that the party moved. Use the current scene and journal for actual position. Reveal only encountered places or the stated visible silhouettes.",
     nearby_routes: routes,

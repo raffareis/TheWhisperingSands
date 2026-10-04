@@ -2154,3 +2154,402 @@ input:focus {
     font-size: 11px;
   }
 }
+
+/* Playable field notes: generous reading and touch targets on matte paper. */
+.table-shell button,
+.welcome button,
+.modal button,
+.table-shell summary,
+.welcome summary,
+.modal summary {
+  min-height: 44px;
+}
+.table-shell .icon-button,
+.welcome .icon-button,
+.modal .icon-button {
+  min-width: 44px;
+}
+.table-shell input,
+.table-shell textarea,
+.welcome input,
+.modal input {
+  font-size: 16px;
+}
+.table-grid > *,
+.party-discussion,
+.puzzle-panel,
+.scene-copy,
+.entry,
+.modal {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.table-shell .section-eyebrow,
+.table-shell .eyebrow,
+.table-shell .small-caps,
+.table-shell .panel-title,
+.table-shell .plate-number,
+.welcome .small-caps {
+  font-size: 11px;
+  letter-spacing: 0.8px;
+}
+.table-shell .character-bio,
+.table-shell .specimen-description p,
+.table-shell .entry p,
+.table-shell .ending span,
+.table-shell .voice-status span,
+.table-shell .config-note {
+  font-size: 14px;
+}
+.table-shell .journal-tabs button {
+  font-size: 12px;
+  padding-inline: 4px;
+}
+.table-shell .entry-meta,
+.table-shell .entry-meta time {
+  font-size: 10px;
+}
+.all-activities {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  flex-shrink: 0;
+  color: var(--teal);
+  font-size: 13px;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.puzzle-panel > p,
+.puzzle-panel .evidence-card p,
+.puzzle-panel .puzzle-submit label,
+.puzzle-panel .puzzle-submit input,
+.puzzle-panel .puzzle-hints p,
+.puzzle-panel .worker-notebook p {
+  font-size: 16px;
+  line-height: 1.8;
+}
+.puzzle-panel .evidence-card p {
+  color: #354934;
+  white-space: pre-wrap;
+}
+.puzzle-panel .evidence-card small,
+.puzzle-panel .puzzle-submit > small,
+.puzzle-panel .puzzle-hints small,
+.puzzle-panel .language-focus,
+.puzzle-panel .worker-notebook button,
+.puzzle-panel .puzzle-hints button,
+.puzzle-panel .puzzle-status {
+  font-size: 14px;
+  color: #46533e;
+}
+.puzzle-panel .worker-notebook summary,
+.puzzle-panel .puzzle-submit button {
+  font-size: 15px;
+}
+.puzzle-panel h2 {
+  font: 400 24px/1.4 var(--serif);
+}
+.puzzle-panel h3 {
+  font: 400 19px/1.5 var(--serif);
+}
+.reading-controls {
+  margin: 10px 0 16px;
+}
+.reading-controls button {
+  padding: 8px 12px;
+  border: 1px solid #879279;
+  color: var(--teal);
+  font-size: 14px;
+}
+.reading-controls button[aria-pressed="true"] {
+  background: #dfe6d4;
+}
+.puzzle-panel.reading-mode,
+.puzzle-panel.reading-mode .evidence-card {
+  background: #fffdf5;
+}
+.puzzle-panel.reading-mode .evidence-card:before {
+  display: none;
+}
+.puzzle-panel.reading-mode p,
+.puzzle-panel.reading-mode .puzzle-submit label,
+.puzzle-panel.reading-mode .puzzle-submit input {
+  font-family: "IBM Plex Sans", sans-serif;
+  font-size: 18px;
+  line-height: 1.9;
+  letter-spacing: 0.2px;
+  color: #26392b;
+}
+.puzzle-panel.reading-mode .evidence-card p {
+  border-bottom-color: #919b8155;
+  padding-block: 14px;
+}
+.puzzle-glossary,
+.negotiation-phrases {
+  padding-block: 12px;
+  border-block: 1px solid var(--line);
+}
+.puzzle-glossary summary,
+.negotiation-phrases summary {
+  cursor: pointer;
+  display: list-item;
+  padding-top: 11px;
+  color: var(--teal);
+  font-size: 15px;
+}
+.puzzle-glossary dl {
+  font-size: 15px;
+  line-height: 1.8;
+}
+.puzzle-glossary dt {
+  font-weight: 600;
+}
+.puzzle-glossary dd {
+  margin: 0 0 14px;
+}
+.storyteller-label {
+  display: block;
+  margin-top: 18px;
+  font: 400 17px/1.5 var(--serif);
+  color: var(--teal);
+}
+.party-discussion {
+  margin-top: 28px;
+  padding: 24px;
+  border: 1px solid #a8af99;
+  border-top: 3px solid var(--teal);
+  background: #f4f0e5;
+  box-shadow: 4px 4px 0 #737e5810;
+}
+.discussion-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  color: var(--teal);
+  align-items: center;
+}
+.discussion-heading h2 {
+  font: 400 24px/1.4 var(--serif);
+  margin: 6px 0 12px;
+}
+.party-discussion p,
+.negotiation-phrases li {
+  font-size: 15px;
+  line-height: 1.7;
+}
+.negotiation-phrases {
+  margin-top: 14px;
+}
+.negotiation-phrases ul {
+  margin: 10px 0;
+  padding-left: 20px;
+}
+.negotiation-phrases li {
+  margin-bottom: 8px;
+}
+.party-messages {
+  max-height: 270px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  margin: 18px 0;
+}
+.party-messages article {
+  background: #e4e8dd;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+  border-left: 2px solid #73866c;
+}
+.party-messages article.own {
+  background: #eae2d1;
+  border-color: #aa7957;
+}
+.party-messages article > div {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 4px;
+  font-size: 13px;
+}
+.party-messages time {
+  margin-left: auto;
+  font-size: 11px;
+  flex-shrink: 0;
+  color: #57634d;
+}
+.party-messages p {
+  white-space: pre-wrap;
+}
+.discussion-empty {
+  color: var(--muted);
+  font-style: italic;
+  padding: 4px 0;
+}
+.discussion-form {
+  display: grid;
+  gap: 10px;
+}
+.discussion-form label,
+.host-access label {
+  font-size: 15px;
+  font-weight: 500;
+}
+.discussion-form textarea {
+  width: 100%;
+  resize: vertical;
+  line-height: 1.6;
+}
+.discussion-form button {
+  justify-self: start;
+}
+.party-voice {
+  border-top: 1px solid var(--line);
+  margin-top: 18px;
+  padding-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.party-voice p {
+  width: 100%;
+  color: #53634c;
+  font-size: 14px;
+}
+.party-voice .recording {
+  border-color: #9b5339;
+  background: #e8d6c7;
+}
+.saved-adventures,
+.host-access,
+.recovery-settings {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
+.saved-adventures h3,
+.host-access h3,
+.recovery-settings h3 {
+  font: 400 19px/1.5 var(--serif);
+  margin-bottom: 10px;
+}
+.saved-adventures p,
+.host-access p,
+.recovery-settings p,
+.offline-check p,
+.rest-callout p {
+  font-size: 14px;
+  line-height: 1.75;
+  margin-bottom: 12px;
+}
+.saved-seat {
+  display: grid;
+  width: 100%;
+  grid-template-columns: minmax(0, 1fr) 20px;
+  padding: 14px 0;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+  gap: 5px 10px;
+}
+.saved-seat strong,
+.saved-seat span {
+  grid-column: 1;
+  overflow-wrap: anywhere;
+}
+.saved-seat span {
+  font-size: 13px;
+  color: var(--muted);
+}
+.saved-seat svg {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: center;
+}
+.host-access form {
+  display: grid;
+  gap: 12px;
+  margin-top: 15px;
+}
+.recovery-settings > button {
+  display: flex;
+  margin: 12px 0;
+  width: 100%;
+  justify-content: center;
+}
+.return-link,
+.offline-check,
+.rest-callout {
+  border: 1px solid #a0ac90;
+  background: #e5eadc;
+  padding: 16px;
+  margin: 16px 0;
+}
+.rest-callout button {
+  width: 100%;
+  white-space: normal;
+}
+.rest-callout p {
+  margin-top: 10px;
+  margin-bottom: 0;
+}
+.discussion-error {
+  color: #843f2b;
+  margin-top: 10px;
+}
+.table-shell .ending {
+  padding: 24px;
+  background: #e6eadb;
+  border: 1px solid #a3ae91;
+  margin-top: 20px;
+}
+.table-shell .ending span {
+  width: 100%;
+  line-height: 1.8;
+}
+.table-shell .ending button {
+  white-space: normal;
+}
+@media (max-width: 720px) {
+  .table-shell .table-header {
+    flex-wrap: wrap;
+  }
+  .table-shell .header-actions {
+    margin-left: auto;
+  }
+  .table-shell .all-activities {
+    order: 3;
+    flex-basis: 100%;
+    justify-content: flex-end;
+    min-height: 32px;
+  }
+  .welcome .welcome-header {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .welcome .all-activities {
+    margin-left: auto;
+  }
+  .party-discussion {
+    padding: 18px;
+  }
+  .discussion-form button,
+  .party-voice button {
+    width: 100%;
+    justify-content: center;
+  }
+  .table-shell .journal-scroll {
+    max-height: none;
+    overflow: visible;
+  }
+  .table-shell .puzzle-panel h2 {
+    font-size: 25px;
+  }
+  .table-shell .puzzle-panel > .section-eyebrow {
+    font-size: 11px;
+  }
+  .table-shell .voice-bar {
+    flex-wrap: wrap;
+  }
+  .table-shell .voice-status {
+    flex-basis: calc(100% - 50px);
+  }
+}

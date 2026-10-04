@@ -49,6 +49,10 @@ import type {
 import { TableAudio } from "./audio";
 import { PuzzlePanel } from "./PuzzlePanel";
 import { Inventory } from "./Inventory";
+import { PartyPanel } from "./PartyPanel";
+import { usePartyAudio } from "./usePartyAudio";
+import { HostAccess } from "./HostAccess";
+import { rememberSeat, savedSeats, type SavedSeat } from "./seats";
 const emptyLive: LiveState = {
   dmStatus: "offline",
   speaker: null,
@@ -58,10 +62,31 @@ const emptyLive: LiveState = {
 const statIcons = { STR: Shield, INT: Brain, SUR: Trees };
 function stored(): Credentials | null {
   try {
-    return JSON.parse(localStorage.getItem("whispering-seat") ?? "null");
+    const c = JSON.parse(localStorage.getItem("whispering-seat") ?? "null");
+    const target =
+      new URLSearchParams(location.search).get("room") ??
+      new URLSearchParams(location.search).get("id");
+    const valid =
+      c &&
+      typeof c.roomId === "string" &&
+      typeof c.playerId === "string" &&
+      typeof c.token === "string";
+    if (target)
+      return valid && c.roomId === target
+        ? c
+        : (savedSeats().find((seat) => seat.credentials.roomId === target)
+            ?.credentials ?? null);
+    return valid ? c : null;
   } catch {
     return null;
   }
+}
+function playerMessage(message: string) {
+  return /api[_ -]?key|openai|gpt-|authorization|bearer|stack trace|sk-[a-z0-9]/i.test(
+    message,
+  )
+    ? "Storyteller is not available. Contact your host."
+    : message;
 }
 const statusText = {
   offline: "Voice is resting",
@@ -73,6 +98,34 @@ const statusText = {
 };
 export default function App() {
   const [credentials, setCredentials] = useState<Credentials | null>(stored);
+  const [seats, setSeats] = useState<SavedSeat[]>(savedSeats);
+  const [seatUnavailable, setSeatUnavailable] = useState(false);
+  const [hostAccess, setHostAccess] = useState<{
+    required: boolean;
+    authenticated: boolean;
+  } | null>(null);
+  const [recoveryRequest, setRecoveryRequest] = useState(() => {
+    const code = new URLSearchParams(location.hash.slice(1)).get("recover");
+    const room =
+      new URLSearchParams(location.search).get("room") ??
+      new URLSearchParams(location.search).get("id");
+    return code && room ? { code, room } : null;
+  });
+  const recoveryRun = useRef<{
+    request: string;
+    promise: Promise<{ credentials: Credentials; state: RoomState }>;
+  } | null>(null);
+  const hostRun = useRef<Promise<void> | null>(null);
+  const [hostBusy, setHostBusy] = useState(false);
+  const [recoveryLink, setRecoveryLink] = useState<{
+    link: string;
+    name: string;
+    expiresAt: number;
+  } | null>(null);
+  const [recoveryCopied, setRecoveryCopied] = useState(false);
+  const [readingMode, setReadingMode] = useState(
+    () => localStorage.getItem("whispering-reading") === "true",
+  );
   const [state, setState] = useState<RoomState | null>(null);
   const [live, setLive] = useState<LiveState>(emptyLive);
   const [config, setConfig] = useState<Configuration | null>(null);
@@ -98,7 +151,16 @@ export default function App() {
   const [settings, setSettings] = useState(false);
   const [sceneOpen, setSceneOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [talkLoading, setTalkLoading] = useState(false);
   const socket = useRef<WebSocket | null>(null);
+  const partyVoice = usePartyAudio(
+    socket,
+    live,
+    listening || voiceLoading || talkLoading,
+    setError,
+  );
+  const audioSession = useRef(0);
+  const dmFloorPending = useRef(false);
   const audio = useRef(new TableAudio());
   const muteRef = useRef(false);
   const voiceRef = useRef(false);
@@ -106,7 +168,7 @@ export default function App() {
   const reconnect = useRef<ReturnType<typeof setTimeout> | null>(null);
   const params = new URLSearchParams(location.search);
   const invitation = params.get("invite");
-  const invitationRoom = params.get("room");
+  const invitationRoom = params.get("room") ?? params.get("id");
   const joining =
     !!invitation && !!invitationRoom && credentials?.roomId !== invitationRoom;
   const player = state?.players.find((p) => p.id === credentials?.playerId);
@@ -128,8 +190,13 @@ export default function App() {
       ...(payload === undefined ? {} : { body: JSON.stringify(payload) }),
     });
     const result = await response.json();
-    if (!response.ok)
-      throw new Error(result.error ?? "This action could not be completed.");
+    if (!response.ok) {
+      if (response.status === 403 && route === "/api/rooms")
+        setHostAccess({ required: true, authenticated: false });
+      throw new Error(
+        playerMessage(result.error ?? "This action could not be completed."),
+      );
+    }
     return result;
   }
   function adopt(value: {
@@ -137,6 +204,11 @@ export default function App() {
     state: RoomState;
     invite?: string;
   }) {
+    if (credentials) rememberSeat(credentials, state);
+    rememberSeat(value.credentials, value.state);
+    setSeats(savedSeats());
+    setSeatUnavailable(false);
+    setError("");
     localStorage.setItem("whispering-seat", JSON.stringify(value.credentials));
     setCredentials(value.credentials);
     setState(value.state);
@@ -145,8 +217,122 @@ export default function App() {
         .characterId,
     );
     if (value.invite) setInvite(value.invite);
-    history.replaceState(null, "", `/?room=${value.credentials.roomId}`);
+    history.replaceState(
+      null,
+      "",
+      `/whispering-sands?room=${value.credentials.roomId}`,
+    );
   }
+  useEffect(() => {
+    localStorage.setItem("whispering-reading", String(readingMode));
+  }, [readingMode]);
+  useEffect(() => {
+    if (!recoveryLink) return;
+    const timer = setTimeout(
+      () => setRecoveryLink(null),
+      Math.max(0, recoveryLink.expiresAt - Date.now()),
+    );
+    return () => clearTimeout(timer);
+  }, [recoveryLink]);
+  useEffect(() => {
+    let disposed = false;
+    void fetch("/api/host-access")
+      .then(async (r) => {
+        if (r.ok) {
+          const access = await r.json();
+          if (!disposed)
+            setHostAccess((previous) =>
+              previous?.authenticated ? previous : access,
+            );
+        }
+      })
+      .catch(() => {});
+    const code = new URLSearchParams(location.hash.slice(1)).get("host");
+    if (code) {
+      setHostBusy(true);
+      if (!hostRun.current)
+        hostRun.current = fetch("/api/host-access", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ key: code }),
+        }).then(async (response) => {
+          if (!response.ok)
+            throw new Error(
+              "That host code could not be accepted. Check the code and try again.",
+            );
+          const hash = new URLSearchParams(location.hash.slice(1));
+          hash.delete("host");
+          history.replaceState(
+            null,
+            "",
+            `/whispering-sands${location.search}${hash.size ? `#${hash}` : ""}`,
+          );
+        });
+      void hostRun.current
+        .then(() => {
+          if (!disposed) setHostAccess({ required: true, authenticated: true });
+        })
+        .catch((e) => {
+          if (!disposed) {
+            setError(e.message);
+            setHostAccess({ required: true, authenticated: false });
+          }
+        })
+        .finally(() => {
+          if (!disposed) setHostBusy(false);
+        });
+    }
+    return () => {
+      disposed = true;
+    };
+  }, []);
+  useEffect(() => {
+    if (!recoveryRequest) return;
+    let disposed = false;
+    setSeatUnavailable(false);
+    setBusy(true);
+    const request = `${recoveryRequest.room}:${recoveryRequest.code}`;
+    if (recoveryRun.current?.request !== request) {
+      recoveryRun.current = {
+        request,
+        promise: fetch(
+          `/api/rooms/${encodeURIComponent(recoveryRequest.room)}/recover`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ recoveryCode: recoveryRequest.code }),
+          },
+        ).then(async (response) => {
+          const value = await response.json();
+          if (!response.ok)
+            throw new Error(
+              value.error ??
+                "This return link is no longer valid. Ask your companion for a new one.",
+            );
+          return value;
+        }),
+      };
+    }
+    void recoveryRun.current.promise
+      .then((value) => {
+        if (!disposed) {
+          adopt(value);
+          setRecoveryRequest(null);
+        }
+      })
+      .catch((e) => {
+        if (!disposed) {
+          setError(playerMessage(e.message));
+          setSeatUnavailable(true);
+        }
+      })
+      .finally(() => {
+        if (!disposed) setBusy(false);
+      });
+    return () => {
+      disposed = true;
+    };
+  }, [recoveryRequest]);
   useEffect(() => {
     void fetch("/api/config")
       .then((r) => r.json())
@@ -154,18 +340,31 @@ export default function App() {
       .catch(() => setError("The adventure server is not available."));
   }, []);
   useEffect(() => {
-    if (!credentials || joining) return;
+    if (!credentials || joining || recoveryRequest) return;
+    setSeatUnavailable(false);
     let disposed = false;
     let delay = 600;
+    let receivedLiveState = false;
     void fetch(`/api/rooms/${credentials.roomId}`, {
       headers: { Authorization: `Bearer ${credentials.token}` },
     })
       .then(async (r) => {
         const v = await r.json();
-        if (!r.ok) throw new Error(v.error);
+        if (!r.ok)
+          throw new Error(
+            playerMessage(v.error ?? "Your saved seat could not be opened."),
+          );
         if (!disposed) {
-          setState(v.state);
-          setLive(v.live);
+          setState((previous) =>
+            previous &&
+            previous.id === v.state.id &&
+            previous.revision > v.state.revision
+              ? previous
+              : v.state,
+          );
+          rememberSeat(credentials, v.state);
+          setSeats(savedSeats());
+          if (!receivedLiveState) setLive(v.live);
           setConfig(v.config);
           setSelectedCharacter(
             v.state.players.find(
@@ -175,7 +374,10 @@ export default function App() {
         }
       })
       .catch((e) => {
-        if (!disposed) setError(e.message);
+        if (!disposed && !receivedLiveState) {
+          setError(e.message);
+          setSeatUnavailable(true);
+        }
       });
     function connect() {
       if (disposed) return;
@@ -192,9 +394,25 @@ export default function App() {
           }),
         );
       ws.onmessage = (event) => {
-        const message = JSON.parse(event.data);
+        if (disposed) return;
+        let message;
+        try {
+          message = JSON.parse(event.data);
+        } catch {
+          return;
+        }
+        partyVoice.receive(message, credentials!.playerId);
         if (message.type === "state") {
-          setState(message.state);
+          receivedLiveState = true;
+          setSeatUnavailable(false);
+          setState((previous) =>
+            previous &&
+            previous.id === message.state.id &&
+            previous.revision > message.state.revision
+              ? previous
+              : message.state,
+          );
+          rememberSeat(credentials!, message.state);
           setLive(message.live);
           setConnected(true);
           delay = 600;
@@ -220,18 +438,29 @@ export default function App() {
           voiceRef.current = false;
           setVoiceLoading(false);
           setListening(false);
+          dmFloorPending.current = false;
+          setTalkLoading(false);
           audio.current.close();
         }
         if (message.type === "floor_granted") {
-          audio.current.setCapturing(true);
-          setListening(true);
+          dmFloorPending.current = false;
+          setTalkLoading(false);
+          if (voiceRef.current) {
+            audio.current.setCapturing(true);
+            setListening(true);
+          } else if (ws.readyState === WebSocket.OPEN)
+            ws.send(JSON.stringify({ type: "floor_end" }));
         }
         if (message.type === "floor_released") {
+          dmFloorPending.current = false;
+          setTalkLoading(false);
           audio.current.setCapturing(false);
           setListening(false);
         }
         if (message.type === "error") {
-          setError(message.message);
+          setError(playerMessage(message.message));
+          dmFloorPending.current = false;
+          setTalkLoading(false);
           setVoiceLoading(false);
           if (message.action === "voice_start") {
             audio.current.close();
@@ -248,7 +477,12 @@ export default function App() {
         setVoiceLoading(false);
         setListening(false);
         audio.current.close();
+        audioSession.current++;
+        partyVoice.close();
+        dmFloorPending.current = false;
+        setTalkLoading(false);
         if (event.code === 4001 || event.code === 4003) {
+          setSeatUnavailable(event.code === 4003);
           setError(
             event.code === 4001
               ? "This seat is open in another tab. Use that tab or reload to return here."
@@ -264,11 +498,20 @@ export default function App() {
     connect();
     return () => {
       disposed = true;
+      setConnected(false);
       if (reconnect.current) clearTimeout(reconnect.current);
       socket.current?.close();
+      audioSession.current++;
       audio.current.close();
+      partyVoice.close();
+      dmFloorPending.current = false;
+      setTalkLoading(false);
+      setVoiceEnabled(false);
+      setVoiceLoading(false);
+      voiceRef.current = false;
+      setListening(false);
     };
-  }, [credentials?.token, joining]);
+  }, [credentials?.token, joining, recoveryRequest]);
   useEffect(() => {
     if (tab === "evidence") return;
     transcript.current?.scrollTo({
@@ -287,7 +530,9 @@ export default function App() {
     try {
       await action();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "This action failed.");
+      setError(
+        playerMessage(e instanceof Error ? e.message : "This action failed."),
+      );
     } finally {
       setBusy(false);
     }
@@ -322,7 +567,7 @@ export default function App() {
   }
   const inviteLink =
     state && invite
-      ? `${location.origin}/?room=${state.id}&invite=${invite}`
+      ? `${location.origin}/whispering-sands?room=${state.id}&invite=${invite}`
       : "";
   async function copyInvite() {
     try {
@@ -334,52 +579,131 @@ export default function App() {
     }
   }
   async function toggleVoice() {
-    if (voiceEnabled) {
-      send({ type: "voice_stop" });
-      audio.current.close();
-      setVoiceEnabled(false);
-      voiceRef.current = false;
-      return;
-    }
-    setVoiceLoading(true);
-    setError("");
+    const session = audioSession.current;
     try {
+      if (voiceEnabled) {
+        if (listening) await audio.current.finishCapture();
+        if (session !== audioSession.current) return;
+        if (listening || dmFloorPending.current) send({ type: "floor_end" });
+        send({ type: "voice_stop" });
+        audio.current.close();
+        setVoiceEnabled(false);
+        setListening(false);
+        dmFloorPending.current = false;
+        setTalkLoading(false);
+        voiceRef.current = false;
+        return;
+      }
+      partyVoice.cancel();
+      setVoiceLoading(true);
+      setError("");
+      const ws = socket.current;
       await audio.current.enable((data) => {
-        if (socket.current?.readyState === WebSocket.OPEN)
-          send({ type: "audio", data });
+        if (ws?.readyState === WebSocket.OPEN)
+          ws.send(JSON.stringify({ type: "audio", data }));
       });
+      if (session !== audioSession.current) return;
       await audio.current.unlock();
       send({ type: "voice_start" });
     } catch (e) {
+      if (session !== audioSession.current) return;
       setVoiceLoading(false);
       audio.current.close();
       setError(
-        e instanceof Error ? e.message : "Microphone could not be enabled.",
+        playerMessage(
+          e instanceof Error ? e.message : "Microphone could not be enabled.",
+        ),
       );
     }
   }
   async function toggleTalk() {
+    if (dmFloorPending.current) return;
+    const session = audioSession.current;
     try {
       if (listening) {
         await audio.current.finishCapture();
+        if (session !== audioSession.current) return;
         send({ type: "floor_end" });
         setListening(false);
       } else {
+        partyVoice.cancel();
         audio.current.clear();
+        dmFloorPending.current = true;
+        setTalkLoading(true);
         send({ type: "floor_start" });
       }
     } catch (e) {
+      dmFloorPending.current = false;
+      setTalkLoading(false);
       setError((e as Error).message);
     }
   }
-  function leave() {
-    socket.current?.close();
-    audio.current.close();
-    localStorage.removeItem("whispering-seat");
-    setCredentials(null);
+  async function makeRecovery(characterId: "sam" | "liz") {
+    await perform(async () => {
+      const result = await api<{ recoveryCode: string }>(
+        `/api/rooms/${state!.id}/recovery`,
+        { characterId },
+      );
+      const target = state!.players.find((p) => p.characterId === characterId);
+      setRecoveryCopied(false);
+      setRecoveryLink({
+        link: `${location.origin}/whispering-sands?room=${state!.id}#recover=${encodeURIComponent(result.recoveryCode)}`,
+        name: target?.name ?? "Your companion",
+        expiresAt: Date.now() + 15 * 60 * 1000,
+      });
+    });
+  }
+  async function copyRecovery() {
+    if (!recoveryLink || recoveryLink.expiresAt <= Date.now()) return;
+    try {
+      await navigator.clipboard.writeText(recoveryLink.link);
+      setRecoveryCopied(true);
+    } catch {
+      setError(
+        "This browser could not copy the return link. Allow clipboard access or use another browser.",
+      );
+    }
+  }
+  function returnToSeat(seat: SavedSeat) {
+    localStorage.setItem("whispering-seat", JSON.stringify(seat.credentials));
     setState(null);
     setError("");
-    history.replaceState(null, "", "/");
+    setSeatUnavailable(false);
+    setCredentials(seat.credentials);
+    history.replaceState(
+      null,
+      "",
+      `/whispering-sands?room=${seat.credentials.roomId}`,
+    );
+  }
+  function leave() {
+    if (credentials) rememberSeat(credentials, state);
+    setSeats(savedSeats());
+    socket.current?.close();
+    audioSession.current++;
+    audio.current.close();
+    partyVoice.close();
+    dmFloorPending.current = false;
+    setTalkLoading(false);
+    setListening(false);
+    setVoiceEnabled(false);
+    setVoiceLoading(false);
+    voiceRef.current = false;
+    localStorage.removeItem("whispering-seat");
+    setCredentials(null);
+    setConnected(false);
+    setState(null);
+    setLive(emptyLive);
+    setCaption("");
+    setText("");
+    setSettings(false);
+    setInviteModal(false);
+    setInvite("");
+    setRecoveryLink(null);
+    setRecoveryRequest(null);
+    setSeatUnavailable(false);
+    setError("");
+    history.replaceState(null, "", "/whispering-sands");
   }
   const lastDM = state?.journal.filter((e) => e.kind === "dm").at(-1);
   const latestScenes = state
@@ -388,11 +712,14 @@ export default function App() {
         state.scene,
       ].slice(-5)
     : [];
-  if (!state || joining)
+  if (!state || joining || recoveryRequest)
     return (
       <div className="welcome">
         <header className="welcome-header">
           <Brand />
+          <a className="all-activities" href="/">
+            All activities
+          </a>
           <span className="small-caps">An island mystery · for two</span>
         </header>
         <main className="welcome-layout">
@@ -437,69 +764,139 @@ export default function App() {
                 ? "Join the same island, the same choices, the same storyteller."
                 : "Choose a character, then invite your companion to take the other seat."}
             </p>
-            <form onSubmit={enter}>
-              <label htmlFor="player-name">Your name</label>
-              <input
-                id="player-name"
-                placeholder="Your name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-                maxLength={40}
-                autoComplete="given-name"
+            {recoveryRequest ? (
+              <div className="saved-adventures">
+                <h3>
+                  {seatUnavailable
+                    ? "Your return link needs renewing."
+                    : "Returning to your adventure…"}
+                </h3>
+                <p>
+                  {seatUnavailable
+                    ? "Ask your companion to open Table settings and choose Help partner return. Your name, discoveries and journal stay with the table."
+                    : "Restoring your character and saved progress."}
+                </p>
+                <button className="subtle" disabled={busy} onClick={leave}>
+                  Back to entrance
+                </button>
+              </div>
+            ) : credentials && !joining ? (
+              <div className="saved-adventures">
+                <h3>
+                  {seatUnavailable
+                    ? "Your saved seat needs help."
+                    : "Returning to your table…"}
+                </h3>
+                <p>
+                  {seatUnavailable
+                    ? "Ask your companion for a return link from Table settings. You can also return to the entrance and start another table."
+                    : "Your adventure and journal are waiting."}
+                </p>
+                <button className="subtle" onClick={leave}>
+                  Back to entrance · keep saved adventure
+                </button>
+              </div>
+            ) : !joining &&
+              ((config?.hostAccessRequired && !hostAccess?.authenticated) ||
+                (hostAccess?.required && !hostAccess.authenticated) ||
+                (!hostAccess?.authenticated &&
+                  !!new URLSearchParams(location.hash.slice(1)).get(
+                    "host",
+                  ))) ? (
+              <HostAccess
+                busy={hostBusy}
+                onReady={() => {
+                  setHostAccess({ required: true, authenticated: true });
+                  setError("");
+                }}
               />
-              <label>
-                {joining
-                  ? "Your character is assigned when you join"
-                  : "Choose your character"}
-              </label>
-              {!joining && (
-                <div className="character-choice">
-                  {(["sam", "liz"] as const).map((id) => (
+            ) : (
+              <form onSubmit={enter}>
+                <label htmlFor="player-name">Your name</label>
+                <input
+                  id="player-name"
+                  placeholder="Your name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                  maxLength={40}
+                  autoComplete="given-name"
+                />
+                <label>
+                  {joining
+                    ? "Your character is assigned when you join"
+                    : "Choose your character"}
+                </label>
+                {!joining && (
+                  <div className="character-choice">
+                    {(["sam", "liz"] as const).map((id) => (
+                      <button
+                        type="button"
+                        key={id}
+                        className={characterChoice === id ? "chosen" : ""}
+                        aria-pressed={characterChoice === id}
+                        onClick={() => setCharacterChoice(id)}
+                      >
+                        <span className={`character-seal ${id}`}>
+                          <img src={`/art/${id}-sunburst.webp`} alt="" />
+                        </span>
+                        <strong>{id === "sam" ? "Samuel" : "Elizabeth"}</strong>
+                        <small>
+                          {id === "sam" ? "The protector" : "The archaeologist"}
+                        </small>
+                        <span className="selection-dot">
+                          {characterChoice === id && <Check size={12} />}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <button
+                  className="primary entry-submit"
+                  disabled={busy || !name.trim()}
+                >
+                  {busy ? (
+                    <LoaderCircle className="spin" size={18} />
+                  ) : (
+                    <>
+                      {joining ? "Join the adventure" : "Create your table"}
+                      <ArrowRight size={18} />
+                    </>
+                  )}
+                </button>
+              </form>
+            )}
+            {!credentials &&
+              !joining &&
+              !recoveryRequest &&
+              seats.length > 0 && (
+                <section
+                  className="saved-adventures"
+                  aria-label="Saved adventures"
+                >
+                  <h3>Return to a saved adventure</h3>
+                  {seats.map((seat) => (
                     <button
-                      type="button"
-                      key={id}
-                      className={characterChoice === id ? "chosen" : ""}
-                      aria-pressed={characterChoice === id}
-                      onClick={() => setCharacterChoice(id)}
+                      className="saved-seat"
+                      key={`${seat.credentials.roomId}-${seat.credentials.playerId}`}
+                      onClick={() => returnToSeat(seat)}
                     >
-                      <span className={`character-seal ${id}`}>
-                        <img src={`/art/${id}-sunburst.webp`} alt="" />
-                      </span>
-                      <strong>{id === "sam" ? "Samuel" : "Elizabeth"}</strong>
-                      <small>
-                        {id === "sam" ? "The protector" : "The archaeologist"}
-                      </small>
-                      <span className="selection-dot">
-                        {characterChoice === id && <Check size={12} />}
-                      </span>
+                      <strong>
+                        {seat.name}
+                        {seat.character
+                          ? ` · ${seat.character === "sam" ? "Sam" : "Liz"}`
+                          : ""}
+                      </strong>
+                      <span>{seat.title}</span>
+                      <ArrowRight size={16} />
                     </button>
                   ))}
-                </div>
+                </section>
               )}
-              <button
-                className="primary entry-submit"
-                disabled={busy || !name.trim()}
-              >
-                {busy ? (
-                  <LoaderCircle className="spin" size={18} />
-                ) : (
-                  <>
-                    {joining ? "Join the adventure" : "Create your table"}
-                    <ArrowRight size={18} />
-                  </>
-                )}
-              </button>
-            </form>
             <div className="entry-foot">
               <Heart size={14} />
               <span>Two players · shared clues · one persistent story</span>
             </div>
-            {credentials && !joining && (
-              <button className="link-button" onClick={leave}>
-                Start another table
-              </button>
-            )}
           </section>
         </main>
         <footer className="welcome-footer">
@@ -513,6 +910,9 @@ export default function App() {
     <div className="table-shell">
       <header className="table-header">
         <Brand />
+        <a className="all-activities" href="/">
+          All activities
+        </a>
         <div className="header-middle">
           <span className="connection-dot" data-online={connected} />
           <span>{connected ? "Your shared table" : "Reconnecting…"}</span>
@@ -582,7 +982,7 @@ export default function App() {
                 </div>
                 <div className="character-badge">
                   {character.id === "emily"
-                    ? "DM COMPANION"
+                    ? "STORY COMPANION"
                     : (state.players.find((p) => p.characterId === character.id)
                         ?.name ?? "AWAITING PLAYER")}
                 </div>
@@ -609,10 +1009,36 @@ export default function App() {
                 </div>
                 {character.hp === 0 && (
                   <p className="incapacitated">
-                    Incapacitated — needs the party’s help.
+                    You can still discuss and solve evidence. If everyone needs
+                    help, rest together.
                   </p>
                 )}
               </div>
+              {state.phase === "playing" &&
+                state.characters.every((c) => c.hp === 0) && (
+                  <div className="rest-callout">
+                    <button
+                      className="subtle"
+                      disabled={
+                        busy ||
+                        !connected ||
+                        dmBusy ||
+                        !!state.pendingCheck ||
+                        !!state.rollDecision ||
+                        state.characters.every((c) => c.hp >= c.maxHp)
+                      }
+                      onClick={() =>
+                        void perform(() =>
+                          api(`/api/rooms/${state.id}/rest`, {}),
+                        )
+                      }
+                    >
+                      <Heart size={15} />
+                      Rest together · recover up to 3 HP
+                    </button>
+                    <p>Take a safe pause. Your evidence stays with you.</p>
+                  </div>
+                )}
               <div className="stats-grid">
                 {(["STR", "INT", "SUR"] as Stat[]).map((stat) => {
                   const Icon = statIcons[stat];
@@ -659,7 +1085,7 @@ export default function App() {
           <div className="scene-toolbar">
             <span className="eyebrow">
               <span />
-              CHAPTER {String(state.chapter).padStart(2, "0")}
+              CHAPTER {String(Math.min(state.chapter + 1, 5)).padStart(2, "0")}
             </span>
             <span>
               <MapPin size={13} />
@@ -701,7 +1127,11 @@ export default function App() {
           {state.scene.status === "error" && (
             <div className="scene-error">
               <Sparkles size={14} />
-              <span>{state.scene.error}</span>
+              <span>
+                {
+                  "This illustration is unavailable. Your adventure can continue."
+                }
+              </span>
               <button
                 onClick={() =>
                   void perform(() =>
@@ -800,6 +1230,36 @@ export default function App() {
               </button>
             </div>
           )}
+          {state.pendingCheck &&
+            state.pendingCheck.characterId !== player?.characterId &&
+            state.players.some(
+              (p) =>
+                p.characterId === state.pendingCheck!.characterId &&
+                !live.presence.some(
+                  (presence) => presence.playerId === p.id && presence.online,
+                ),
+            ) && (
+              <div className="offline-check">
+                <p>
+                  The player needed for this check is away. Wait for them, help
+                  them return in Table settings, or cancel this check to
+                  continue.
+                </p>
+                <button
+                  className="subtle"
+                  disabled={busy || !connected}
+                  onClick={() =>
+                    void perform(() =>
+                      api(`/api/rooms/${state.id}/check-cancel`, {
+                        checkId: state.pendingCheck!.id,
+                      }),
+                    )
+                  }
+                >
+                  Cancel absent companion’s check
+                </button>
+              </div>
+            )}
           {state.lastRoll && !state.pendingCheck && (
             <div className="last-roll">
               <Dices size={18} />
@@ -926,15 +1386,32 @@ export default function App() {
               </button>
               {!config?.aiAvailable && (
                 <p className="config-note">
-                  Set OPENAI_API_KEY on the server to enable the storyteller.
+                  Storyteller is not available. Contact your host.
                 </p>
               )}
             </div>
           ) : state.phase === "complete" ? (
             <div className="ending">
               <Sunrise size={22} />
-              <strong>Your story is written.</strong>
-              <span>Every choice brought you here. Your journal is saved.</span>
+              <strong>
+                {state.ending?.rescued
+                  ? "You found your way home."
+                  : "Your story is written."}
+              </strong>
+              <span>
+                {state.ending?.choice === "confront"
+                  ? "You chose to confront the keeper."
+                  : state.ending?.choice === "forgive"
+                    ? "You chose to forgive the keeper."
+                    : state.ending?.choice === "leave"
+                      ? "You chose to leave without reconciliation."
+                      : "Every choice brought you here."}{" "}
+                {state.ending?.rescued ? "The party was rescued. " : ""}Your
+                discoveries, choice and journal are saved.
+              </span>
+              <button className="subtle" onClick={leave}>
+                Start another adventure · keep this journal
+              </button>
             </div>
           ) : (
             <>
@@ -947,7 +1424,7 @@ export default function App() {
                 <div className="voice-status">
                   <strong>
                     {listening
-                      ? "Your turn. The table is listening."
+                      ? "Your turn. Speak to the storyteller."
                       : live.speaker
                         ? `${state.players.find((p) => p.id === live.speaker)?.name} is speaking…`
                         : statusText[live.dmStatus]}
@@ -961,13 +1438,19 @@ export default function App() {
                 <button
                   className={`talk-button ${listening ? "recording" : ""}`}
                   disabled={
-                    !voiceEnabled ||
-                    !connected ||
-                    !!state.pendingCheck ||
-                    !!state.rollDecision ||
-                    !!(live.speaker && live.speaker !== player?.id)
+                    !listening &&
+                    (!voiceEnabled ||
+                      talkLoading ||
+                      partyVoice.loading ||
+                      partyVoice.talking ||
+                      !!live.partySpeaker ||
+                      !connected ||
+                      !!state.pendingCheck ||
+                      !!state.rollDecision ||
+                      !!(live.speaker && live.speaker !== player?.id))
                   }
-                  onClick={toggleTalk}
+                  onClick={() => void toggleTalk()}
+                  aria-pressed={listening}
                   aria-label={
                     listening ? "Finish speaking" : "Speak to the storyteller"
                   }
@@ -980,7 +1463,11 @@ export default function App() {
                 </button>
                 <button
                   className="icon-button"
-                  aria-label={muted ? "Unmute table audio" : "Mute table audio"}
+                  aria-label={
+                    muted
+                      ? "Unmute storyteller audio"
+                      : "Mute storyteller audio"
+                  }
                   onClick={() => {
                     setMuted(!muted);
                     muteRef.current = !muted;
@@ -991,7 +1478,10 @@ export default function App() {
                 </button>
                 <button
                   className="voice-enable"
-                  disabled={voiceLoading || !connected || !config?.aiAvailable}
+                  disabled={
+                    voiceLoading ||
+                    (!voiceEnabled && (!connected || !config?.aiAvailable))
+                  }
                   onClick={() => void toggleVoice()}
                 >
                   {voiceLoading ? (
@@ -1004,6 +1494,9 @@ export default function App() {
                   <span>{voiceEnabled ? "Leave voice" : "Enable voice"}</span>
                 </button>
               </div>
+              <label className="storyteller-label" htmlFor="storyteller-action">
+                Ask the storyteller
+              </label>
               <form
                 className="action-box"
                 onSubmit={(event) => {
@@ -1018,11 +1511,12 @@ export default function App() {
                 }}
               >
                 <input
-                  aria-label="Your action"
+                  id="storyteller-action"
+                  aria-label="Ask the storyteller"
                   placeholder={
                     state.pendingCheck || state.rollDecision
                       ? "Resolve the dice check to continue…"
-                      : "What do you do? Speak, or write your action…"
+                      : "Describe your action or ask about your discovery…"
                   }
                   value={text}
                   onChange={(e) => setText(e.target.value)}
@@ -1033,17 +1527,23 @@ export default function App() {
                     !!state.pendingCheck ||
                     !!state.rollDecision ||
                     !!live.speaker ||
+                    !!live.partySpeaker ||
+                    partyVoice.talking ||
+                    partyVoice.loading ||
                     !connected
                   }
                 />
                 <button
-                  aria-label="Send action"
+                  aria-label="Ask the storyteller"
                   disabled={
                     busy ||
                     dmBusy ||
                     !!state.pendingCheck ||
                     !!state.rollDecision ||
                     !!live.speaker ||
+                    !!live.partySpeaker ||
+                    partyVoice.talking ||
+                    partyVoice.loading ||
                     !text.trim() ||
                     !connected
                   }
@@ -1053,7 +1553,12 @@ export default function App() {
               </form>
               {live.dmStatus === "error" && (
                 <div className="dm-error">
-                  <span>{live.error}</span>
+                  <span>
+                    {playerMessage(
+                      live.error ??
+                        "Storyteller is not available. Contact your host.",
+                    )}
+                  </span>
                   <button
                     onClick={() =>
                       void perform(() =>
@@ -1066,6 +1571,28 @@ export default function App() {
                 </div>
               )}
             </>
+          )}
+          {credentials && (
+            <PartyPanel
+              room={state}
+              credentials={credentials}
+              connected={connected}
+              voice={{
+                enabled: partyVoice.enabled,
+                loading: partyVoice.loading,
+                talking: partyVoice.talking,
+                speaker: live.partySpeaker ?? null,
+                blocked:
+                  state.phase === "complete" ||
+                  dmBusy ||
+                  listening ||
+                  talkLoading ||
+                  voiceLoading ||
+                  !!live.speaker,
+                enable: partyVoice.enable,
+                talk: partyVoice.talk,
+              }}
+            />
           )}
         </section>
         <aside className="journal-panel">
@@ -1112,6 +1639,8 @@ export default function App() {
                 key={state.puzzleView?.id}
                 room={state}
                 credentials={credentials}
+                readingMode={readingMode}
+                setReadingMode={setReadingMode}
               />
             ) : tab === "clues" ? (
               <>
@@ -1253,7 +1782,13 @@ export default function App() {
         </Modal>
       )}
       {settings && (
-        <Modal title="Your table, your pace." close={() => setSettings(false)}>
+        <Modal
+          title="Your table, your pace."
+          close={() => {
+            setSettings(false);
+            setRecoveryLink(null);
+          }}
+        >
           <div className="setting-row">
             <div>
               <strong>Illustrate the adventure</strong>
@@ -1286,9 +1821,68 @@ export default function App() {
             The adventure is saved on the server. This device remembers your
             seat. Keep your private invitation between you and your companion.
           </p>
+          <div className="setting-row">
+            <div>
+              <strong>Reading mode</strong>
+              <p>Larger type and clear lines for field evidence.</p>
+            </div>
+            <button
+              role="switch"
+              aria-checked={readingMode}
+              aria-label="Reading mode"
+              className={`toggle ${readingMode ? "on" : ""}`}
+              onClick={() => setReadingMode(!readingMode)}
+            >
+              <span />
+            </button>
+          </div>
+          <section className="recovery-settings">
+            <h3>Return to this adventure</h3>
+            <p>
+              Your name, character and progress stay at this table. A return
+              link moves a seat to another device.
+            </p>
+            {companion && (
+              <button
+                className="subtle"
+                disabled={busy}
+                onClick={() => void makeRecovery(companion.characterId)}
+              >
+                Help partner return
+              </button>
+            )}
+            {player && (
+              <button
+                className="subtle"
+                disabled={busy}
+                onClick={() => void makeRecovery(player.characterId)}
+              >
+                Move my seat to another device
+              </button>
+            )}
+            {recoveryLink && (
+              <div className="return-link">
+                <p>
+                  Return link ready for {recoveryLink.name}. Expires at{" "}
+                  {new Date(recoveryLink.expiresAt).toLocaleTimeString("en", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}{" "}
+                  (15 minutes). It can be used once. Share privately with that
+                  player.
+                </p>
+                <button className="primary" onClick={() => void copyRecovery()}>
+                  <Copy size={16} />
+                  {recoveryCopied
+                    ? "Return link copied"
+                    : "Copy private return link"}
+                </button>
+              </div>
+            )}
+          </section>
           <button className="subtle" onClick={leave}>
             <LogOut size={16} />
-            Leave this device’s seat
+            Back to entrance · keep saved adventure
           </button>
         </Modal>
       )}
@@ -1327,7 +1921,11 @@ export default function App() {
 
 function Brand() {
   return (
-    <a className="brand" href="/" aria-label="The Whispering Sands">
+    <a
+      className="brand"
+      href="/whispering-sands"
+      aria-label="The Whispering Sands"
+    >
       <span className="brand-compass">
         <Compass size={27} strokeWidth={1.2} />
       </span>

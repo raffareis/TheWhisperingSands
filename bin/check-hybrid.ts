@@ -36,7 +36,7 @@ const room = new RoomRuntime(store, created.state.id, {
   falKey: process.env.FAL_KEY!,
   imageModel: "gpt-image-2.5-flare",
   realtimeModel: "gpt-realtime-2.1",
-  textModel: "gpt-6.1-sol",
+  textModel: "gpt-4.1",
   dataDir,
 });
 const hash = (bytes: Buffer) =>

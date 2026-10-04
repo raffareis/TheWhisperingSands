@@ -1,22 +1,27 @@
 # The Whispering Sands
 
-A violent storm has wrecked Sam and Liz's boat on an unfamiliar island. Their
-sixteen-year-old daughter Emily is safe beside them, but the radio is broken and
+A storm has wrecked Sam and Liz's boat on an unfamiliar island. Their
+sixteen-year-old daughter Emily is safe beside them. The radio is broken, and
 the mainland is hidden beyond the mist.
 
-Among the scattered timber lies a locked rescue chest. Its damaged records do
-not agree at first glance. The family must compare what each person can read,
-recover supplies and find a safe passage before the tide covers the shore.
+A short, dry path leads to Palm Camp, where an open store porch provides a roof
+and drinking water. The family can reach it immediately. A harbour rescue chest
+has washed down from that store and lies near their wreckage. It is island
+property, not a mysterious object from their boat. Its equipment drawer has two
+damaged records that must be compared before it can be opened.
 
-The island has stranger silences than an abandoned beach should have. A warning
-bell is missing from the records. An old lighthouse stands dark. Somewhere in
-the forest, shells seem to hold the sound of people trying to speak.
+A lighthouse stands dark above the ridge. Shells carry fragments of unfamiliar
+voices. Nobody yet knows whether the weather, a mechanical failure or someone's
+actions caused the strange silence. Let evidence establish the answer.
 
-This is a cooperative mystery about listening, choosing words carefully and
-finding a way home. Sam and Liz are the two player characters; Emily accompanies
-them. Survival, exploration and conversation lead through five evidence locks.
-Each player holds a different record and must explain it to the other in English.
+Sam and Liz are the two player characters; Emily accompanies them. This is a
+cooperative mystery about listening, investigating and finding a way home.
+Private evidence is available automatically when its chapter becomes active:
+one record belongs to each seat. Players explain, compare and question those
+records in English. No search roll, item purchase or precise phrase is needed
+to receive them. A player may ask for slower speech, a definition or free help.
 
-The revised campaign in `06_StoryGuide.md` is the story canon. Begin with one
-short moment on the beach, then let the pair decide what to do. Keep later
-discoveries concealed until the party earns them.
+Begin with one short beach scene and offer shelter, examining the chest or
+checking on each other. All three are legitimate first actions. Follow the
+current server progress and the revised story guide. Never announce a cause,
+culprit or motive before its discovery has been earned.

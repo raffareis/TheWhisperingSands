@@ -1,4 +1,5 @@
 import WebSocket from "ws";
+import { randomUUID } from "node:crypto";
 import { kleinModel } from "./image-edits.js";
 
 import { z } from "zod";
@@ -16,6 +17,11 @@ import {
   requestCheck,
   setScene,
   rollCompanion,
+  finishRescue,
+  safeRest,
+  cancelAbsentCheck,
+  applyNarratedConsequences,
+  finishNarratedRescue,
 } from "./game.js";
 import { instructions, textTurn, tools } from "./dm.js";
 import { RoomStore, GameError } from "./store.js";
@@ -36,6 +42,7 @@ export interface Settings extends WorkerSettings {
   realtimeModel: string;
   imageModel: string;
   dataDir: string;
+  hostAccessRequired?: boolean;
 }
 export class RoomRuntime {
   state: RoomState;
@@ -43,6 +50,7 @@ export class RoomRuntime {
   live: LiveState = {
     dmStatus: "offline",
     speaker: null,
+    partySpeaker: null,
     imageEnabled: true,
     presence: [],
   };
@@ -56,6 +64,9 @@ export class RoomRuntime {
   private responseCalls = new Map<string, Set<string>>();
   private audioBytes = 0;
   private floorTimer: ReturnType<typeof setTimeout> | null = null;
+  private partyFloorTimer: ReturnType<typeof setTimeout> | null = null;
+  private partyAudioBytes = 0;
+  private partyChatRate = new Map<string, { count: number; until: number }>();
   private toolRounds = 0;
   private currentResponseId: string | null = null;
   private closed = false;
@@ -81,6 +92,7 @@ export class RoomRuntime {
   ) {
     this.state = store.load(id);
     this.state.rollDecision ??= null;
+    this.state.partyChat ??= [];
     this.state.preferences ??= { illustrations: true };
     // Existing campaigns acquire puzzle progress on the next chapter, avoiding a silent reset.
     const migrated = !this.state.puzzles;
@@ -124,6 +136,7 @@ export class RoomRuntime {
   config(): Configuration {
     return {
       aiAvailable: !!this.settings.key,
+      hostAccessRequired: this.settings.hostAccessRequired ?? false,
       realtimeModel: this.settings.realtimeModel,
       imageModel: this.settings.imageModel,
       imageEditModel: this.settings.falKey ? kleinModel : null,
@@ -162,6 +175,7 @@ export class RoomRuntime {
     for (const [old, id] of this.clients)
       if (id === player.id) {
         if (this.live.speaker === id) this.releaseFloor(id, false);
+        this.endPartyFloor(id);
         this.voiceUsers.delete(id);
         this.clients.delete(old);
         old.close(4001, "This seat was opened in another tab.");
@@ -177,14 +191,132 @@ export class RoomRuntime {
     if (id && !this.clientsHas(id)) {
       this.voiceUsers.delete(id);
       if (this.live.speaker === id) this.releaseFloor(id, false);
+      this.endPartyFloor(id);
     }
     if (!this.voiceUsers.size) this.stopVoice();
     this.publish(false);
-    if (!this.clients.size)
+    if (!this.clients.size && !this.idleTimer)
       this.idleTimer = setTimeout(() => this.stopVoice(), 30000);
   }
   private clientsHas(id: string) {
     return [...this.clients.values()].includes(id);
+  }
+  revokeSeat(playerId: string) {
+    this.endPartyFloor(playerId);
+    if (this.live.speaker === playerId) this.releaseFloor(playerId, false);
+    this.voiceUsers.delete(playerId);
+    for (const [ws, id] of this.clients) {
+      if (id !== playerId) continue;
+      this.send(ws, {
+        type: "seat_revoked",
+        message:
+          "This seat was recovered on another device. Use the new credentials to return.",
+      });
+      this.clients.delete(ws);
+      ws.close(
+        4001,
+        "Seat recovered on another device. Your saved token is no longer valid.",
+      );
+    }
+    if (!this.voiceUsers.size) this.stopVoice();
+    this.publish(false);
+  }
+  partyChat(player: Player, raw: unknown) {
+    const { text } = z
+      .object({ text: z.string().trim().min(1).max(1200) })
+      .parse(raw);
+    if (!this.state.players.some((p) => p.id === player.id))
+      throw new GameError("Join this table first.", 401);
+    if (this.state.phase === "complete")
+      throw new GameError("This adventure has ended.", 409);
+    const now = Date.now();
+    const rate = this.partyChatRate.get(player.id);
+    if (!rate || rate.until <= now)
+      this.partyChatRate.set(player.id, { count: 1, until: now + 60000 });
+    else if (++rate.count > 20)
+      throw new GameError("Please slow down the companion chat.", 429);
+    const message = {
+      id: randomUUID(),
+      playerId: player.id,
+      text,
+      at: new Date().toISOString(),
+    };
+    this.state.partyChat = [...(this.state.partyChat ?? []), message].slice(
+      -200,
+    );
+    // This channel never enters the DM journal, workers or Realtime conversation.
+    this.publish();
+    return { message };
+  }
+  beginPartyFloor(player: Player) {
+    if (!this.clientsHas(player.id))
+      throw new GameError("Connect to this table first.", 401);
+    if (this.state.phase === "complete")
+      throw new GameError("This adventure has ended.", 409);
+    if (this.live.speaker)
+      throw new GameError("The storyteller microphone is in use.", 409);
+    if (this.live.partySpeaker === player.id) return;
+    if (this.live.partySpeaker)
+      throw new GameError("Your companion is speaking.", 409);
+    this.live.partySpeaker = player.id;
+    this.partyAudioBytes = 0;
+    this.partyFloorTimer = setTimeout(
+      () => this.endPartyFloor(player.id),
+      60000,
+    );
+    this.sendTo(player.id, { type: "party_floor_granted" });
+    this.publish(false);
+  }
+  partyAudio(playerId: string, data: string) {
+    if (this.live.partySpeaker !== playerId) return;
+    const bytes = pcmBytes(data);
+    if (!bytes) return;
+    if (this.partyAudioBytes + bytes.length > 2_880_000) {
+      this.endPartyFloor(playerId);
+      return;
+    }
+    this.partyAudioBytes += bytes.length;
+    this.broadcast({ type: "party_audio", delta: data, playerId }, playerId);
+  }
+  endPartyFloor(playerId: string) {
+    if (this.live.partySpeaker !== playerId) return;
+    if (this.partyFloorTimer) clearTimeout(this.partyFloorTimer);
+    this.partyFloorTimer = null;
+    this.live.partySpeaker = null;
+    this.partyAudioBytes = 0;
+    this.sendTo(playerId, { type: "party_floor_released" });
+    this.publish(false);
+  }
+  rest() {
+    if (
+      this.thinking ||
+      this.replyActive ||
+      this.live.speaker ||
+      this.live.dmStatus === "speaking" ||
+      this.live.dmStatus === "connecting"
+    )
+      throw new GameError("Let the storyteller finish before resting.", 409);
+    const result = this.gameOperation(() => safeRest(this.state));
+    this.publish();
+    this.refreshRealtimeContext();
+    return result;
+  }
+  cancelCheck(player: Player, checkId: string) {
+    const result = this.gameOperation(() =>
+      cancelAbsentCheck(this.state, player.id, checkId, this.clients.values()),
+    );
+    this.publish();
+    this.refreshRealtimeContext();
+    return result;
+  }
+  private gameOperation<T>(operation: () => T): T {
+    try {
+      return operation();
+    } catch (error) {
+      throw new GameError(
+        error instanceof Error ? error.message : "Game action rejected.",
+      );
+    }
   }
   private requireAI() {
     if (!this.settings.key)
@@ -244,7 +376,7 @@ export class RoomRuntime {
     ) {
       this.sendRT({
         type: "session.update",
-        session: { instructions: instructions(this.state) },
+        session: { type: "realtime", instructions: instructions(this.state) },
       });
       this.sendRT({
         type: "conversation.item.create",
@@ -270,6 +402,16 @@ export class RoomRuntime {
         message,
       );
       const staged = structuredClone(this.state);
+      if (
+        ((turn.consequences?.nextChapter !== null &&
+          turn.consequences?.nextChapter !== undefined &&
+          turn.consequences.nextChapter > staged.chapter) ||
+          turn.rescue) &&
+        !turn.scene
+      )
+        throw new Error(
+          "A chapter transition or rescue requires its matching public scene.",
+        );
       if (turn.consequences) applyConsequences(staged, turn.consequences);
       if (turn.check) requestCheck(staged, turn.check);
       if (turn.scene)
@@ -277,6 +419,13 @@ export class RoomRuntime {
           ...turn.scene,
           visualPrompt: turn.scene.description,
         });
+      // Rescue is applied after validated consequences and the final public scene.
+      const finish = turn.rescue;
+      if (finish) {
+        if (turn.scene?.locationId !== "ferry_quay")
+          throw new Error("The rescue scene must show the actual ferry quay.");
+        finishRescue(staged, finish);
+      }
       log(staged, "dm", turn.narration);
       this.state = staged;
       this.publish();
@@ -329,7 +478,8 @@ export class RoomRuntime {
     if (this.voiceReady) {
       try {
         await this.voiceReady;
-        this.sendTo(player.id, { type: "voice_ready" });
+        if (this.voiceUsers.has(player.id))
+          this.sendTo(player.id, { type: "voice_ready" });
       } catch (error) {
         this.voiceUsers.delete(player.id);
         throw error;
@@ -423,6 +573,9 @@ export class RoomRuntime {
           this.realtime = null;
           this.replyActive = false;
           this.currentResponseId = null;
+          if (this.floorTimer) clearTimeout(this.floorTimer);
+          this.floorTimer = null;
+          this.audioBytes = 0;
           this.live.speaker = null;
           this.live.dmStatus = "offline";
           this.broadcast({ type: "voice_closed" });
@@ -432,7 +585,8 @@ export class RoomRuntime {
     });
     try {
       await this.voiceReady;
-      this.sendTo(player.id, { type: "voice_ready" });
+      if (this.voiceUsers.has(player.id))
+        this.sendTo(player.id, { type: "voice_ready" });
     } catch (error) {
       this.voiceUsers.delete(player.id);
       this.fail(error);
@@ -455,7 +609,14 @@ export class RoomRuntime {
     if (this.realtime?.readyState === WebSocket.OPEN)
       this.realtime.send(JSON.stringify(event));
   }
+  private refreshRealtimeContext() {
+    this.sendRT({
+      type: "session.update",
+      session: { type: "realtime", instructions: instructions(this.state) },
+    });
+  }
   private requestResponse() {
+    this.refreshRealtimeContext();
     this.replyActive = true;
     this.live.dmStatus = "thinking";
     this.sendRT({ type: "response.create" });
@@ -475,6 +636,8 @@ export class RoomRuntime {
       this.thinking
     )
       throw new GameError("Finish the current turn or dice check first.");
+    if (this.live.partySpeaker)
+      throw new GameError("The companion microphone is in use.", 409);
     if (this.live.speaker && this.live.speaker !== player.id)
       throw new GameError("Your companion is speaking.", 409);
     if (this.live.speaker === player.id) return;
@@ -502,7 +665,7 @@ export class RoomRuntime {
     this.sendRT({ type: "input_audio_buffer.clear" });
     this.sendRT({
       type: "session.update",
-      session: { instructions: instructions(this.state) },
+      session: { type: "realtime", instructions: instructions(this.state) },
     });
     this.sendRT({
       type: "conversation.item.create",
@@ -530,8 +693,8 @@ export class RoomRuntime {
   }
   audio(playerId: string, data: string) {
     if (this.live.speaker !== playerId) return;
-    const bytes = Buffer.from(data, "base64");
-    if (bytes.length > 12000 || bytes.length % 2 !== 0) return;
+    const bytes = pcmBytes(data);
+    if (!bytes) return;
     if (this.audioBytes + bytes.length > 2_880_000) {
       this.commitFloor(playerId);
       return;
@@ -702,9 +865,16 @@ export class RoomRuntime {
               }
             } else if (call.name === "request_check")
               result = requestCheck(this.state, args);
-            else if (call.name === "update_party")
-              result = applyConsequences(this.state, args);
-            else if (call.name === "illustrate_scene" && illustrates++ === 0) {
+            else if (call.name === "finish_rescue") {
+              result = finishNarratedRescue(this.state, args);
+              this.enqueueImage(this.state.scene);
+            } else if (call.name === "update_party") {
+              result = applyNarratedConsequences(this.state, args);
+              if (args.scene) this.enqueueImage(this.state.scene);
+            } else if (
+              call.name === "illustrate_scene" &&
+              illustrates++ === 0
+            ) {
               result = setScene(this.state, {
                 ...args,
                 visualPrompt: args.description,
@@ -740,6 +910,7 @@ export class RoomRuntime {
       const err = event.error as { code?: string; message?: string };
       if (err.code === "response_cancel_not_active") return;
       this.replyActive = false;
+      if (this.live.speaker) this.releaseFloor(this.live.speaker, false);
       this.fail(new Error(err.message ?? "Voice session error."));
     }
   }
@@ -806,11 +977,13 @@ export class RoomRuntime {
     )
       log(this.state, "system", `Evidence puzzle solved: ${id}.`);
     this.publish();
+    this.refreshRealtimeContext();
     return result;
   }
-  puzzleHint(id: string) {
-    const result = revealHint(this.state, id);
+  puzzleHint(id: string, expectedHintCount?: number) {
+    const result = revealHint(this.state, id, expectedHintCount);
     this.publish();
+    this.refreshRealtimeContext();
     return result;
   }
   stopVoice() {
@@ -838,6 +1011,7 @@ export class RoomRuntime {
   }
   close() {
     this.closed = true;
+    if (this.live.partySpeaker) this.endPartyFloor(this.live.partySpeaker);
     this.workers.close();
     this.store.save(this.state);
     if (this.idleTimer) clearTimeout(this.idleTimer);
@@ -846,9 +1020,26 @@ export class RoomRuntime {
   }
 }
 export const socketMessage = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("party_start") }),
+  z.object({ type: z.literal("party_end") }),
+  z.object({ type: z.literal("party_audio"), data: z.string().max(18000) }),
   z.object({ type: z.literal("voice_start") }),
   z.object({ type: z.literal("voice_stop") }),
   z.object({ type: z.literal("floor_start") }),
   z.object({ type: z.literal("floor_end") }),
   z.object({ type: z.literal("audio"), data: z.string().max(18000) }),
 ]);
+
+function pcmBytes(data: string): Buffer | null {
+  if (
+    data.length > 16000 ||
+    !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(
+      data,
+    )
+  )
+    return null;
+  const bytes = Buffer.from(data, "base64");
+  return bytes.length > 0 && bytes.length <= 12000 && bytes.length % 2 === 0
+    ? bytes
+    : null;
+}

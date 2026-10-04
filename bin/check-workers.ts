@@ -20,7 +20,7 @@ const created = store.create("QA Explorer", "sam");
 const joined = store.join(created.state.id, created.invite, "QA Archivist");
 const room = new RoomRuntime(store, created.state.id, {
   key,
-  textModel: process.env.OPENAI_TEXT_MODEL ?? "gpt-6.1-sol",
+  textModel: process.env.OPENAI_TEXT_MODEL ?? "gpt-4.1",
   realtimeModel: process.env.OPENAI_REALTIME_MODEL ?? "gpt-realtime-2.1",
   imageModel: process.env.OPENAI_IMAGE_MODEL ?? "gpt-image-2.5-flare",
   workerModel: process.env.OPENAI_WORKER_MODEL ?? "gpt-5.4-nano",

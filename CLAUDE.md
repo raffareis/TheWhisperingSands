@@ -2,7 +2,10 @@
 
 App de RPG compartilhado para Rafael e Meg; interface e jogo inteiramente em inglês.
 Escopo inicial: [#1](https://github.com/raffareis/TheWhisperingSands/issues/1). Revamp autorizado: [#2](https://github.com/raffareis/TheWhisperingSands/issues/2).
-O README documenta execução, regras e limites observados.
+O README documenta execução, regras e limites observados. O portal da Meg fica
+em meg.raffareis.com; a atividade RPG tem rota /whispering-sands. Catálogo público
+em shared/activities.ts, sem fontes da campanha ou atividades fictícias.
+Entrega jogável e publicação: #6; achados ASTRA: #5.
 
 ## Fontes e estrutura
 
@@ -16,7 +19,10 @@ O README documenta execução, regras e limites observados.
   Nunca copiar para `public/`, projeções dos jogadores ou referências de imagem.
   Toda passagem da campanha respeita o enigma; maré não pune ritmo da aula.
 - `server/game.ts`: regras autoritativas, atributos, dados, consequências e cenas.
-- `server/store.ts`: SQLite, convites e autenticação dos dois assentos.
+- `server/store.ts`: SQLite, convites, tokens hash e recuperação de assentos
+  por link de 15 minutos, uso único, com revogação do token anterior.
+- `server/host-access.ts`: criação de mesas restrita pelo código privado,
+  cookie HttpOnly assinado e vinculado ao host. Não versionar HOST_ACCESS_KEY.
 - `server/runtime.ts`: uma sessão Realtime por sala, tools, voz e fila de imagens.
 - `server/index.ts`: HTTP, WebSocket, assets de produção e cleanup de processos.
 - `shared/types.ts`: estado público e view do próprio assento; projeção HTTP/WS
@@ -68,3 +74,20 @@ Workers não podem mudar regras. Resultado especulativo só publica após respos
 completada; cancelamento invalida o job. Limites de tentativas persistem no SQLite.
 A biblioteca `public/art/base-assets.json` guarda referências e proveniência;
 texto dos puzzles fica em HTML, não na arte gerada.
+
+A discussão da dupla fica em partyChat, nunca no journal/contexto do DM ou
+dos workers. party_* relaya PCM sem IA/transcrição. Atualizar o contexto
+Realtime depois de puzzle, hint e ferramenta antes da próxima resposta.
+Checks são físicos, alcançáveis; descanso evita gameover da aula. A última
+trava prepara o sinal; finish_rescue só encerra após o boarding beat e escolha
+livre de confrontar, perdoar ou partir. Todos os finais permitem resgate.
+
+Deploy: bin/deploy-meg empacota somente HEAD limpo e inicia build remoto.
+Aguardar seu taskctl ID antes de ativar /home/marvin/apps/meg/current. O serviço
+pub-meg carrega env privado; DATA_DIR fica fora de releases. Publicar pela
+skill publicar-app, PUBLICAR_DOMINIO=raffareis.com. Prova pública sem IA em
+bin/check-public.ts; campanha real paga e com checkpoint em
+bin/check-playable-live.ts. O texto usa GPT-4.1 e a voz usa gpt-realtime-2.1.
+FAL_ENV_FILE carrega somente FAL_KEY: arquivos mistos da CLI de mídia também
+trazem OPENAI_API_KEY de outro projeto; passar o arquivo inteiro como --env-file
+pode trocar a credencial do mestre e causar quota zero. Não repetir essa carga.

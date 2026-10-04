@@ -27,7 +27,7 @@ export class RoomStore {
     mkdirSync(directory, { recursive: true });
     this.db = new DatabaseSync(join(directory, "adventure.sqlite"));
     this.db.exec(
-      "PRAGMA journal_mode=WAL; CREATE TABLE IF NOT EXISTS rooms(id TEXT PRIMARY KEY, state TEXT NOT NULL, invite_hash TEXT NOT NULL); CREATE TABLE IF NOT EXISTS seats(token_hash TEXT PRIMARY KEY,room_id TEXT NOT NULL,player_id TEXT NOT NULL); CREATE TABLE IF NOT EXISTS worker_attempts(room_id TEXT NOT NULL,task TEXT NOT NULL,at INTEGER NOT NULL); CREATE INDEX IF NOT EXISTS worker_attempts_at ON worker_attempts(at);",
+      "PRAGMA journal_mode=WAL; CREATE TABLE IF NOT EXISTS rooms(id TEXT PRIMARY KEY, state TEXT NOT NULL, invite_hash TEXT NOT NULL); CREATE TABLE IF NOT EXISTS seats(token_hash TEXT PRIMARY KEY,room_id TEXT NOT NULL,player_id TEXT NOT NULL); CREATE TABLE IF NOT EXISTS worker_attempts(room_id TEXT NOT NULL,task TEXT NOT NULL,at INTEGER NOT NULL); CREATE INDEX IF NOT EXISTS worker_attempts_at ON worker_attempts(at); CREATE TABLE IF NOT EXISTS recovery_codes(code_hash TEXT PRIMARY KEY,room_id TEXT NOT NULL,player_id TEXT NOT NULL,expires_at INTEGER NOT NULL);",
     );
   }
   load(id: string): RoomState {
@@ -103,7 +103,10 @@ export class RoomStore {
       .prepare("SELECT room_id,player_id FROM seats WHERE token_hash=?")
       .get(digest(token)) as { room_id: string; player_id: string } | undefined;
     if (!row || (roomId && row.room_id !== roomId))
-      throw new GameError("Please join this table first.", 401);
+      throw new GameError(
+        "Your saved seat token is not valid. Ask your companion for a recovery link.",
+        401,
+      );
     const state = this.load(row.room_id);
     const player = state.players.find((p) => p.id === row.player_id);
     if (!player) throw new GameError("Player not found.", 401);
@@ -115,6 +118,72 @@ export class RoomStore {
       .prepare("UPDATE rooms SET invite_hash=? WHERE id=?")
       .run(digest(invite), roomId);
     return invite;
+  }
+  // A current seat holder may transfer either occupied seat in their own table.
+  // The code is a bearer secret: never put it in public state, logs or a URL query.
+  recovery(
+    token: string,
+    roomId: string,
+    characterId: "sam" | "liz",
+    now = Date.now(),
+  ) {
+    const { state } = this.authenticate(token, roomId);
+    const target = state.players.find(
+      (player) => player.characterId === characterId,
+    );
+    if (!target)
+      throw new GameError("That seat has not been occupied yet.", 409);
+    const recoveryCode = randomBytes(32).toString("base64url");
+    this.db.exec("BEGIN IMMEDIATE");
+    try {
+      this.db
+        .prepare(
+          "DELETE FROM recovery_codes WHERE (room_id=? AND player_id=?) OR expires_at<=?",
+        )
+        .run(roomId, target.id, now);
+      this.db
+        .prepare("INSERT INTO recovery_codes VALUES(?,?,?,?)")
+        .run(digest(recoveryCode), roomId, target.id, now + 15 * 60 * 1000);
+      this.db.exec("COMMIT");
+    } catch (error) {
+      this.db.exec("ROLLBACK");
+      throw error;
+    }
+    return { recoveryCode };
+  }
+  recover(roomId: string, recoveryCode: string, now = Date.now()) {
+    this.db.exec("BEGIN IMMEDIATE");
+    try {
+      const row = this.db
+        .prepare(
+          "SELECT player_id,expires_at FROM recovery_codes WHERE code_hash=? AND room_id=?",
+        )
+        .get(digest(recoveryCode), roomId) as
+        { player_id: string; expires_at: number } | undefined;
+      if (!row || row.expires_at <= now)
+        throw new GameError(
+          "This recovery code is invalid, expired or already used.",
+          403,
+        );
+      const state = this.load(roomId);
+      if (!state.players.some((player) => player.id === row.player_id))
+        throw new GameError("This seat cannot be recovered.", 403);
+      const token = randomBytes(32).toString("base64url");
+      this.db
+        .prepare("DELETE FROM seats WHERE room_id=? AND player_id=?")
+        .run(roomId, row.player_id);
+      this.db
+        .prepare("INSERT INTO seats VALUES(?,?,?)")
+        .run(digest(token), roomId, row.player_id);
+      this.db
+        .prepare("DELETE FROM recovery_codes WHERE room_id=? AND player_id=?")
+        .run(roomId, row.player_id);
+      this.db.exec("COMMIT");
+      return { state, credentials: { roomId, playerId: row.player_id, token } };
+    } catch (error) {
+      this.db.exec("ROLLBACK");
+      throw error;
+    }
   }
   reserveWorker(roomId: string, task: string) {
     const since = Date.now() - 3600000;

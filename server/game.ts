@@ -1,4 +1,9 @@
-import { puzzles } from "./puzzles.js";
+import {
+  puzzles,
+  reservedCampaignItemIds,
+  reservedCampaignClueIds,
+} from "./puzzles.js";
+import { campaignMap } from "./campaign-map.js";
 import { randomInt, randomUUID } from "node:crypto";
 import { z } from "zod";
 import type {
@@ -91,6 +96,7 @@ export function initialState(id: string): RoomState {
     sceneHistory: [],
     clues: [],
     journal: [],
+    partyChat: [],
     pendingCheck: null,
     lastRoll: null,
     rollDecision: null,
@@ -121,6 +127,7 @@ export function log(
   // Only public events enter this journal. The adventure's DM notes stay server-side.
 }
 export const checkSchema = z.object({
+  purpose: z.enum(["physical", "puzzle"]).optional().default("physical"),
   characterId: z.enum(["sam", "liz", "emily"]),
   stat: z.enum(["STR", "INT", "SUR"]),
   target: z.number().int().min(2).max(16),
@@ -133,7 +140,11 @@ export function requestCheck(state: RoomState, raw: unknown): Check {
   if (state.pendingCheck || state.rollDecision)
     throw new Error("Resolve the current check first.");
   const value = checkSchema.parse(raw);
+  if (value.purpose !== "physical")
+    throw new Error("Evidence puzzles cannot be solved or graded with dice.");
   const character = state.characters.find((c) => c.id === value.characterId)!;
+  if (value.target > character.stats[value.stat] + 6)
+    throw new Error("This difficulty is impossible for the character.");
   if (character.hp === 0)
     throw new Error(`${character.shortName} is incapacitated.`);
   state.pendingCheck = { ...value, id: randomUUID() };
@@ -181,11 +192,10 @@ function resolveCheck(
     `${character.shortName}: D6 ${die} + ${check.stat} ${character.stats[check.stat]} = ${total} / ${check.target}. ${success ? "Success." : "Setback."}${!success && check.dangerous ? " Lost 1 HP." : ""}${rerolled ? " Rerolled at the cost of 1 HP." : ""}`,
   );
   if (state.characters.every((c) => c.hp === 0)) {
-    state.phase = "complete";
     log(
       state,
       "system",
-      "The party is incapacitated. Your adventure has come to an end.",
+      "The party needs a safe rest in shelter. Evidence and discussion remain available; rest to recover before another physical check.",
     );
   }
   return state.lastRoll;
@@ -310,6 +320,19 @@ export function applyConsequences(state: RoomState, raw: unknown) {
     value.items.length
   )
     throw new Error("Duplicate item changes.");
+  const reservedItems = new Set(reservedCampaignItemIds);
+  const reservedClues = new Set(reservedCampaignClueIds);
+  if (
+    value.items.some((item) => reservedItems.has(item.id)) ||
+    value.clues.some((clue) => reservedClues.has(clue.id))
+  )
+    throw new Error(
+      "Campaign evidence and artifacts are controlled by the puzzle engine.",
+    );
+  if (value.nextChapter === 5 && !state.ending?.rescued)
+    throw new Error(
+      "Use finish_rescue after the final puzzle and boarding beat.",
+    );
   for (const change of value.items) {
     const current =
       state.characters
@@ -342,7 +365,7 @@ export function applyConsequences(state: RoomState, raw: unknown) {
     state.chapterTitle = chapterTitles[state.chapter];
     if (state.chapter === 5) state.phase = "complete";
   }
-  if (state.characters.every((c) => c.hp === 0)) state.phase = "complete";
+
   log(state, "system", value.reason);
   return {
     characters: state.characters,
@@ -357,17 +380,74 @@ export const visualEditSchema = z.object({
 export const sceneSchema = z.object({
   title: z.string().min(1).max(100),
   location: z.string().min(1).max(100),
+  locationId: z.string().max(60).nullable().optional(),
   description: z.string().min(1).max(600),
   visualPrompt: z.string().min(10).max(1800),
   edit: visualEditSchema.nullable().optional(),
 });
+export const publicSceneSchema = sceneSchema.omit({ visualPrompt: true });
+export const partyUpdateSchema = consequencesSchema.extend({
+  scene: publicSceneSchema.nullable().optional(),
+});
+export function applyNarratedConsequences(state: RoomState, raw: unknown) {
+  const value = partyUpdateSchema.parse(raw);
+  if (
+    value.nextChapter !== null &&
+    value.nextChapter > state.chapter &&
+    !value.scene
+  )
+    throw new Error(
+      "A chapter transition requires its public scene in update_party.scene.",
+    );
+  const staged = structuredClone(state);
+  const result = applyConsequences(staged, value);
+  if (value.scene)
+    setScene(staged, { ...value.scene, visualPrompt: value.scene.description });
+  Object.assign(state, staged);
+  return { ...result, scene: state.scene };
+}
 export function setScene(state: RoomState, raw: unknown) {
   const v = sceneSchema.parse(raw);
+  const normalize = (text: string) => text.trim().toLowerCase();
+  // Only explicit identifiers or recognised location names have deterministic gates.
+  // Free prose is not a semantic validator and may still require DM review.
+  const aliases: Record<string, string> = {
+    "the uncharted shore": "wreck_beach",
+    "the beacon gallery": "beacon_gallery",
+    "the ferry quay": "ferry_quay",
+    quay: "ferry_quay",
+    beacon: "beacon_gallery",
+  };
+  const requestedId = v.locationId ?? aliases[normalize(v.location)];
+  const node = requestedId
+    ? campaignMap.nodes.find((node) => node.id === requestedId)
+    : campaignMap.nodes.find(
+        (node) => normalize(node.label) === normalize(v.location),
+      );
+  if (requestedId && !node) throw new Error("Unknown campaign location.");
+  if (node) {
+    // Shelter stays accessible before the first evidence lock. The quay becomes
+    // available for the boarding beat after the final lock, before completion.
+    const minimumChapter =
+      node.id === "palm_camp"
+        ? 0
+        : node.id === "ferry_quay"
+          ? 4
+          : node.first_chapter;
+    const gate = campaignMap.edges.find((edge) => edge.to === node.id)?.gate;
+    const gateSolved =
+      !gate ||
+      node.id === "palm_camp" ||
+      !!state.puzzles?.find((p) => p.id === gate.puzzle_id)?.solved;
+    if (state.chapter < minimumChapter || !gateSolved)
+      throw new Error("This campaign location is not available yet.");
+  }
   state.sceneHistory.push({ ...state.scene });
   state.scene = {
     id: randomUUID(),
     title: v.title,
     location: v.location,
+    ...(node ? { locationId: node.id } : {}),
     description: v.description,
     prompt: v.visualPrompt,
     imageUrl: state.scene.imageUrl,
@@ -379,4 +459,90 @@ export function setScene(state: RoomState, raw: unknown) {
 }
 export function statName(stat: Stat) {
   return { STR: "Strength", INT: "Intelligence", SUR: "Survival" }[stat];
+}
+
+export const finishRescueSchema = z.object({
+  choice: z.enum(["confront", "forgive", "leave"]),
+});
+export const narratedRescueSchema = finishRescueSchema.extend({
+  scene: publicSceneSchema.extend({ locationId: z.literal("ferry_quay") }),
+});
+export function finishNarratedRescue(state: RoomState, raw: unknown) {
+  const value = narratedRescueSchema.parse(raw);
+  const staged = structuredClone(state);
+  setScene(staged, { ...value.scene, visualPrompt: value.scene.description });
+  const result = finishRescue(staged, value);
+  Object.assign(state, staged);
+  return { ...result, scene: state.scene };
+}
+export function finishRescue(state: RoomState, raw: unknown) {
+  const { choice } = finishRescueSchema.parse(raw);
+  if (
+    state.phase !== "playing" ||
+    state.chapter !== 4 ||
+    !state.puzzles?.find((p) => p.id === puzzles[4].id)?.solved
+  )
+    throw new Error(
+      "Solve the final evidence puzzle and play the boarding beat before finishing the rescue.",
+    );
+  if (state.pendingCheck || state.rollDecision)
+    throw new Error("Resolve the current check before boarding.");
+  state.ending = { choice, rescued: true };
+  state.chapter = 5;
+  state.chapterTitle = chapterTitles[5];
+  state.phase = "complete";
+  const epilogues = {
+    confront:
+      "The family boards the rescue ferry. The stolen voices are returned, and the keeper must answer for his actions.",
+    forgive:
+      "The family boards the rescue ferry. The stolen voices are returned; forgiveness is offered freely, without promising to stay.",
+    leave:
+      "The family boards the rescue ferry. The stolen voices are returned, and they leave without reconciliation or any promise to remain.",
+  };
+  log(state, "system", epilogues[choice]);
+  return state.ending;
+}
+export function safeRest(state: RoomState) {
+  if (state.phase !== "playing" || !state.characters.every((c) => c.hp === 0))
+    throw new Error(
+      "A recovery rest is available when the whole party is incapacitated.",
+    );
+  if (state.pendingCheck || state.rollDecision)
+    throw new Error("Resolve the current check before resting.");
+  for (const character of state.characters)
+    character.hp = Math.min(character.maxHp, 3);
+  log(
+    state,
+    "system",
+    "The party rests in safe shelter and recovers 3 HP each. Evidence, items and chapter progress are preserved.",
+  );
+  return { characters: state.characters };
+}
+export function cancelAbsentCheck(
+  state: RoomState,
+  playerId: string,
+  checkId: string,
+  onlinePlayerIds: Iterable<string>,
+) {
+  const check = state.pendingCheck;
+  const actor = state.players.find((p) => p.id === playerId);
+  const owner = state.players.find((p) => p.characterId === check?.characterId);
+  if (
+    !check ||
+    check.id !== checkId ||
+    !actor ||
+    !owner ||
+    actor.id === owner.id ||
+    new Set(onlinePlayerIds).has(owner.id)
+  )
+    throw new Error(
+      "Only the companion can cancel a pending check while its owner is offline.",
+    );
+  state.pendingCheck = null;
+  log(
+    state,
+    "system",
+    `${actor.name} cancelled ${owner.name}'s pending physical check while they were offline. No roll or consequence was applied.`,
+  );
+  return { cancelled: checkId };
 }

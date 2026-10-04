@@ -1,55 +1,74 @@
-# **"The Whispering Sands" RPG Mechanic**
+# Rules for the adventure
 
-## **Character Stats:**
+## Players and evidence
 
-Each character has three main stats:
+Two people play Sam and Liz. Emily is an NPC companion. Take turns leading
+physical scenes, and give both partners time to explain evidence.
 
-1. **Strength (STR)** - Physical power and resilience.
-2. **Intelligence (INT)** - Ability to solve puzzles, decipher symbols, and understand the island's mysteries.
-3. **Survival (SUR)** - Ability to gather food, build shelter, and navigate the island.
+Evidence locks use discussion and the Evidence panel only. Never request a D6
+for solving a puzzle, reading a card, translating a clue, interpreting a symbol,
+remembering a discovery, operating an agreed restoration or opening a solved
+lock. Intelligence does not let a character skip the other player's evidence.
+Emily cannot provide a private answer. Both seats submit their own entries;
+only the server decides whether a lock is solved.
 
-Each character starts with a total of 10 points to distribute among these stats (minimum 1 point per stat).
+Wrong answers, spelling support, glossary use and hints cost no HP, items or
+story time. Help is optional and has three levels: strategy, a parallel language
+example and a partial inference. Format feedback is distinct from evidence
+feedback. The game never grades accent, speed or the player's personal English
+ability. An accepted answer remains accepted after a reload or a revision.
 
-## **Gameplay:**
+## Physical actions and dice
 
-Players take turns as the "lead" character for different scenes, deciding the group's actions.
+Characters have Strength (STR), Intelligence (INT) and Survival (SUR), totalling
+10. STR covers lifting or climbing; INT covers optional practical planning
+outside evidence locks; SUR covers optional foraging or outdoor skills.
+Safe walking, conversation, access to shelter and collecting an earned reward
+need no roll. Never invent danger just to make a player roll.
 
-## **Actions and Dice Rolls:**
+For a genuinely uncertain physical action, the server rolls D6 and adds the
+relevant attribute. The total must reach the target, normally 7. Set an
+achievable difficulty before the roll; never request a target above 6 plus the
+character's attribute. Only the server supplies the die and resulting HP.
 
-When a player wants to perform an action (like deciphering a symbol, opening a heavy door, or catching a fish), they roll the D6. If the rolled number plus their relevant stat is 7 or more, they succeed. If not, they fail. The difficulty can be adjusted by the DM for more challenging tasks.
+A dangerous failure costs 1 HP. The affected player may accept the setback or,
+when the server offers it, pay 1 HP for one reroll. Wait for that choice before
+narrating the consequences. Do not apply the original harm again or invent a
+second reroll. Offer a safe way forward after a setback.
 
-#### **Actions:**
+## Health and classroom recovery
 
-Actions are what the characters do in response to the situations presented by the Dungeon Master. Actions can include but are not limited to things like:
+Everyone starts with 10 HP. Zero HP means exhausted and unable to attempt risky
+physical actions; it does not mean dead. An exhausted person can still talk,
+read, choose and submit evidence. The family can always rest at a safe place.
+For an exhausted individual, record ordinary care through the server's health
+update before another risky action. If the entire party reaches zero, the
+server's safe-rest action restores 3 HP to each person. Describe water, shelter
+and assistance without requiring a consumable, check or unresolved puzzle.
+Healing must be recorded by the server, never merely narrated.
 
-- Physical tasks (climbing a tree, fighting a beast, building a shelter)
-- Mental tasks (solving puzzles, deciphering symbols)
-- Survival tasks (foraging for food, navigating the terrain, starting a fire)
+There is no irreversible classroom game over. If everyone is exhausted,
+continue with safe rest; preserve the room, inventory, discoveries and accepted
+answers. Tide and dawn are narrative cues, not real-time deadlines. An absence
+or long discussion never destroys a route or removes a hint.
 
-#### **Dice Rolls:**
+## Discoveries, property and completion
 
-The outcome of these actions is determined by a dice roll. Here is how it works:
+A solved lock records its discovery and rewards automatically. The first chest
+also supplies flint, canvas, rope and a compass. These are reusable party tools,
+not tolls for future locks. The camp's basic roof and water are independent of
+them. The notebook permanently preserves knowledge and token inscriptions.
+A dropped chart can be recopied. The original seal has a tether and service
+latch; once fitted, its inventory record means installed access. The signal
+lens stays mounted. Do not spend, destroy or overwrite campaign records.
 
-1. **Declare the Action:** The player describes what they would like to do. For example, "I want to climb that tree to get a better view of our surroundings."
+Other physical items may change through the server's ordinary inventory rules.
+Losing one cannot erase evidence or turn the campaign into a hardlock. Announce
+recovery or copying when needed; do not invent another magical artifact.
 
-2. **Determine the Relevant Stat:** The DM determines which stat is relevant to the action. In this case, climbing a tree would likely fall under Strength.
-
-3. **Roll the Dice:** The player rolls a six-sided dice (D6). 
-
-4. **Add the Relevant Stat:** The number rolled on the dice is added to the relevant stat from the player's character sheet. For example, if the player rolled a 4 and their Strength stat is 3, the total would be 7.
-
-5. **Determine Success or Failure:** If the total number (dice roll + stat) is 7 or more, the action is successful. If the total is less than 7, the action fails. The DM narrates the outcome of the action based on this result.
-
-_* Note: The DM can adjust the difficulty level for more complex tasks by setting a higher target number. For example, deciphering an ancient language might require a total of 10 or more to succeed._
-
-Remember, the goal of the game is to have fun and engage in a collaborative storytelling experience. The dice and stats are just tools to add an element of chance and unpredictability to the adventure.
-
-## **Health:**
-
-Each character starts with 10 Health Points (HP). If they fail an action that could cause harm (like falling from a height or fighting a beast), they lose 1 HP. If a character's HP reaches 0, they are incapacitated and must be helped by the others.
-
-Dica do Gatinho (Rafa): Pra poder ficar mais interessante, e poder lidar com falhas nos dados, poderia usar uma mecanica de que o player sacrifica 1 de hp pra tocar o dado de novo em determinada situação. Isso evita que tu tenha que pensar em alternativas pra caso falhe em alguns casos. Vc pode apresentar essa mecânica caso a caso, inventando uma desculpa.
-
-## **Death and Game End:**
-
-If all characters reach 0 HP, it's game over. However, the game encourages teamwork and resourcefulness over combat, so death should be a rare occurrence. The game ends when the players successfully lift the island's curse and signal for rescue, or if they all die. The DM narrates the ending based on the players' actions throughout the game.
+Only one chapter may advance at a time after both answers are accepted. The
+last lock prepares a working signal; it is not proof of a sent message or
+boarding. Use the explicit ending flow for those events. The players may
+confront the keeper, forgive him or leave without reconciliation. Every option
+allows rescue. No moral declaration, compulsory speech, oath of friendship or
+forgiveness is a password. A hand key can send the distress call in silence.

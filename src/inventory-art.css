@@ -1,0 +1,13 @@
+/* One shared bitmap; square viewports preserve the exact 3×3 cell boundaries.
+   Words stay in the existing HTML item names, never in the illustration. */
+.specimen-art .inventory-specimen-cell {
+  display: block;
+  height: 100%;
+  aspect-ratio: 1;
+  flex: 0 0 auto;
+  max-width: 100%;
+  background-image: url("/art/inventory-specimens-sunburst.webp");
+  background-size: 300% 300%;
+  background-repeat: no-repeat;
+  mix-blend-mode: multiply;
+}

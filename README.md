@@ -7,13 +7,21 @@ fichas, inventário, pistas e diário persistente. Escopo inicial: [#1](https://
 
 ## Jogar
 
-1. Crie uma mesa, informe seu nome e escolha Sam ou Liz.
+Portal: <https://meg.raffareis.com>. A primeira atividade fica em
+<https://meg.raffareis.com/whispering-sands>; o catálogo em `shared/activities.ts`
+permite acrescentar outras atividades. O anfitrião usa seu código privado para
+criar mesas. O segundo jogador entra pelo convite, sem precisar desse código.
+
+1. Abra a atividade, libere o acesso de anfitrião, informe seu nome e escolha Sam ou Liz.
 2. Use **Invite companion** e envie o link privado à outra pessoa. Ela ocupa o
    outro personagem, no próprio navegador. Emily é a companheira conduzida pelo mestre.
 3. Quando os dois entrarem, use **Begin adventure**.
 4. Use **Enable voice** nos dois dispositivos. Toque no microfone para falar e
    toque novamente para terminar. Os dois ouvem o mesmo mestre e a fala do companheiro.
-   É possível interromper a narração. Texto também funciona, inclusive sem microfone.
+   É possível interromper a narração. **Ask the storyteller** envia texto ao mestre.
+   **Discuss together** envia mensagens só à dupla, sem invocar a IA.
+   **Enable companion audio** habilita escuta; **Talk to companion** usa um
+   canal separado, sem transcrição ou persistência de áudio.
 5. Quando o mestre pedir um teste, somente o personagem indicado pode usar **Roll D6**.
    Uma falha permite **Accept setback** ou **Push your luck**, uma nova tentativa por 1 HP,
    se houver vida suficiente. O mestre recebe o resultado verdadeiro.
@@ -48,7 +56,7 @@ Para carregar uma configuração privada já existente sem copiar a chave:
 OPENAI_ENV_FILE=/caminho/privado/.env ./bin/dev
 ```
 
-Os padrões configuráveis são `gpt-realtime-2.1` para voz, `gpt-6.1-sol` para texto
+Os padrões configuráveis são `gpt-realtime-2.1` para voz, `gpt-4.1` para texto
 sem uma sessão de voz ativa e `gpt-image-2.5-flare` para ilustrações. Voz e imagens
 utilizam a API paga. O banco preparado usa `gpt-image-2.5-sunburst`; durante a
 partida o Flare compõe novas cenas a partir dessas imagens de referência.
@@ -72,9 +80,37 @@ servidor Vite de desenvolvimento.
 `HOST` e `PORT` configuram a escuta; o padrão é `127.0.0.1:4317`.
 **Localhost é um preview neste computador.** Para jogar em celulares ou computadores
 distintos, é necessário um endereço HTTPS acessível aos dois e WebSocket habilitado.
-O microfone exige HTTPS ou localhost. A publicação na internet ainda não faz parte
-desta entrega; antes dela, restringir a criação de mesas aos convidados do anfitrião.
-O convite autentica a segunda pessoa e não substitui uma restrição de acesso à criação.
+O microfone exige HTTPS ou localhost. A instalação pública no marvin-dell usa
+Cloudflare Tunnel e `HOST_ACCESS_KEY` fora do repositório. Só o anfitrião pode
+criar mesas pagas; convites e links de recuperação dão acesso à sala correspondente.
+O cookie de anfitrião é HttpOnly, expira em sete dias e fica vinculado ao hostname.
+Um link com `#host=...` habilita o navegador e remove o fragmento após sucesso.
+Não coloque esse código em query strings, issues ou capturas públicas.
+
+## Publicar no marvin-dell
+
+O destino usa releases identificadas pelo commit, serviço de usuário
+`pub-meg.service` e Cloudflare Tunnel `marvin-dell`, com a zona `raffareis.com`.
+As chaves ficam em `/home/marvin/.config/whispering-sands/server.env` (0600),
+carregadas por `OPENAI_ENV_FILE`. O banco durável usa
+`/home/marvin/.local/share/whispering-sands/data`, fora das releases.
+
+Depois de testes/build, commit e push, `./bin/deploy-meg` envia um arquivo do
+commit e inicia `npm ci && npm run build` pelo `taskctl` remoto. Retenha o ID
+devolvido e confira seu resultado antes de ativar o symlink `current`. O script
+imprime os comandos de ativação; não promove uma release com build pendente.
+
+```bash
+ssh marvin-dell taskctl wait ID_DEVOLVIDO
+# Depois do build verde, use o comando de symlink impresso por bin/deploy-meg.
+publicar-app servico meg 4317 /home/marvin/apps/meg/current -- \
+  'NODE_ENV=production OPENAI_ENV_FILE=/home/marvin/.config/whispering-sands/server.env ./bin/dev'
+PUBLICAR_DOMINIO=raffareis.com publicar-app publicar meg 4317
+```
+
+A prova `bin/check-public.ts` verifica HTTPS, criação restrita, convite,
+WebSocket da dupla, recuperação/revogação e negação das fontes privadas, sem
+invocar IA. Carregue o arquivo privado de anfitrião e configure `APP_URL`.
 
 ## Estado e regras
 
@@ -82,6 +118,9 @@ O convite autentica a segunda pessoa e não substitui uma restrição de acesso 
   encaminhado ao mestre e ao companheiro. As respostas do mestre são compartilhadas.
 - O servidor executa ferramentas da IA para pedir testes, registrar consequências
   e ilustrar cenas. Cliente e modelo não escolhem o valor do D6.
+- Testes físicos exigem dificuldade alcançável. Definições e puzzles não usam dados.
+  Zero HP não encerra a aula: com todos incapacitados, o descanso manual recupera
+  3 HP por personagem. O parceiro pode cancelar um check cujo dono está offline.
 - Regras originais: STR/INT/SUR somam 10; cada personagem começa com 10 HP;
   D6 + atributo deve alcançar a dificuldade, normalmente 7. Falha perigosa custa 1 HP.
 - Em uma falha, a escolha de aceitar ou tentar novamente acontece antes da narração
@@ -94,7 +133,11 @@ O convite autentica a segunda pessoa e não substitui uma restrição de acesso 
   `DATA_DIR` permite mover esses dados; eles ficam fora do Git.
 - Cada dispositivo guarda seu token de assento localmente. Recarregar retoma a sala.
   Abrir o mesmo assento em outra aba substitui a conexão anterior. Sair do assento
-  ou apagar o armazenamento do navegador perde essa credencial; não há recuperação de conta nesta versão.
+  preserva a partida na lista **Saved adventures**. Em **Table settings**,
+  **Help partner return** ou **Move my seat to another device** produz um link
+  privado de 15 minutos, uso único. Ele preserva personagem e progresso, revoga
+  o token antigo e fecha a conexão substituída. O parceiro pode recuperar um
+  assento cujo armazenamento foi apagado; não existe login por e-mail.
 - Reiniciar o servidor encerra a voz; habilite-a novamente para continuar com o
   estado e o diário salvos. Uma pintura interrompida fica identificada, sem retry automático.
 
@@ -106,10 +149,11 @@ npm run build
 npm run format:check
 ```
 
-Os 32 testes verificam regras, autorização das rolagens, decisão e custo de nova
+Os 67 testes verificam regras, autorização das rolagens, decisão e custo de nova
 tentativa, consequências, persistência, isolamento de salas, transporte HTTP e
 WebSocket, sessão Realtime compartilhada, execução de ferramentas e atribuição de
-transcrições que chegam fora de ordem. Não usam a API paga.
+transcrições que chegam fora de ordem, conversa sem IA, recuperação/revogação
+de assentos, todas as travas e três finais. Não usam a API paga.
 
 A verificação real é explícita e faz chamadas pagas de texto, voz, TTS de uma fala
 sintética de teste e uma ilustração:
@@ -125,6 +169,26 @@ fala sintética foi transcrita com o jogador correto e uma imagem foi gerada e
 servida pela aplicação. Execução: **41 segundos**. A prova não usou microfones
 físicos ou dois celulares reais. A interface foi verificada no preview T3 com
 **NVIDIA GeForce RTX 4060**, em desktop e viewport de iPhone.
+
+A prova explícita `bin/check-playable-live.ts` percorre as cinco travas com
+dois assentos, discussão separada, mestre real, uma fala sintética atribuída
+e resgate escolhido. Imagens ficam pausadas para reutilizar a prova válida
+do renderer. Checkpoint impede repetir cobranças por engano; credenciais de
+QA ficam em arquivo separado 0600 sob `output/verification/`. Antes de uma
+rodada diferente, reconcilie o resultado anterior e use `PROOF_LABEL`.
+`PROOF_SEATS` permite retomar os assentos já criados, sem repetir a abertura.
+
+Na prova completa de 2026-10-04, as cinco travas foram aceitas pela dupla,
+o mestre real avançou cada capítulo e registrou o resgate com a escolha livre
+de partir. A voz sintética foi atribuída a Sam; os dois clientes receberam
+**399 blocos de áudio idênticos**. Foram **62 segundos** de execução automatizada,
+não uma medida de duração de aula. Evidência: `output/verification/playable-live-r10.json`.
+A prova também identificou e corrigiu carga de credencial OpenAI indevida
+pelo arquivo da fal.ai e ausência de `session.type` nas atualizações Realtime.
+Avanços de capítulo agora registram a cena na mesma operação; a prova confirmou
+Palm Camp, Keeper’s Archive, Voice Machine, Beacon Gallery e Ferry Quay.
+Uma prova separada do caminho de texto gerou a cena Flare em 13,8 segundos,
+em segundo plano, após o avanço para Palm Camp.
 
 ## Arte e história
 
@@ -156,8 +220,8 @@ aos jogadores. Maré e deslocamento são recursos narrativos, sem cronômetro
 real ou penalidade por dificuldade com inglês.
 
 A direção do ASTRA usa arquivo marítimo, guache, grafite, papel e objetos gastos.
-`public/art/base-assets.json` contém oito assets com IDs, papéis, descrições,
-paths, hashes, modelo, usage disponível e prompts integrais. Os oito assets
+`public/art/base-assets.json` contém nove assets com IDs, papéis, descrições,
+paths, hashes, modelo, usage disponível e prompts integrais. Os nove assets
 ativos são WebP gerados explicitamente com **Sunburst**, qualidade medium; os
 três objetos têm transparência real. A chapa
 costeira é a referência de estilo global. O worker transmite os arquivos reais
@@ -168,6 +232,11 @@ prioriza estilo e personagens antes de objetos e cenários, com até quatro
 referências por composição. Os WebP ativos e PNG de origem são versionados;
 cenas de partidas, recibos completos de geração e builds ficam em `data/` e
 `output/`, fora do Git.
+
+O inventário usa também uma chapa Sunburst de nove espécimes, recortada em CSS
+para os suprimentos, documentos, lente e fichas de palavras. Os nomes e palavras
+continuam em HTML. `bin/generate-inventory-assets.ts` reutiliza a geração existente
+e registra prompt, referência e hash no mesmo manifesto.
 
 O gerador de assets chama a CLI instalada da skill imagegen e exige `uv`, a
 skill e acesso à API. Geração faz chamadas pagas; ativação só deve acontecer

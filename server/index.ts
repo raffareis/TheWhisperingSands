@@ -3,7 +3,7 @@ import {
   type IncomingMessage,
   type ServerResponse,
 } from "node:http";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, statSync, realpathSync } from "node:fs";
 import { resolve, extname } from "node:path";
 import { WebSocketServer, WebSocket } from "ws";
 import { z } from "zod";
@@ -12,14 +12,19 @@ import { RoomStore, GameError } from "./store.js";
 import { RoomRuntime, socketMessage, type Settings } from "./runtime.js";
 import { projectRoom } from "./puzzles.js";
 import { rollCheck, rerollCheck, acceptRoll } from "./game.js";
+import { HostAccess } from "./host-access.js";
 import { kleinModel } from "./image-edits.js";
+import { loadFalEnv } from "./load-env.js";
 if (existsSync(".env")) process.loadEnvFile(".env");
+loadFalEnv(process.env.FAL_ENV_FILE);
 const production = process.env.NODE_ENV === "production";
 const port = Number(process.env.PORT ?? 4317);
 const host = process.env.HOST ?? "127.0.0.1";
+const hostAccess = new HostAccess(process.env.HOST_ACCESS_KEY ?? "");
 const settings: Settings = {
+  hostAccessRequired: hostAccess.required,
   key: process.env.OPENAI_API_KEY ?? "",
-  textModel: process.env.OPENAI_TEXT_MODEL ?? "gpt-6.1-sol",
+  textModel: process.env.OPENAI_TEXT_MODEL ?? "gpt-4.1",
   realtimeModel: process.env.OPENAI_REALTIME_MODEL ?? "gpt-realtime-2.1",
   imageModel: process.env.OPENAI_IMAGE_MODEL ?? "gpt-image-2.5-flare",
   falKey: process.env.FAL_KEY ?? "",
@@ -50,7 +55,7 @@ const vite = production
   ? null
   : await createViteServer({
       server: { middlewareMode: true },
-      appType: "spa",
+      appType: "mpa",
     });
 const rate = new Map<string, { count: number; until: number }>();
 function limited(req: IncomingMessage) {
@@ -93,13 +98,9 @@ const server = createServer(async (req, res) => {
       req.url ?? "/",
       `http://${req.headers.host ?? "localhost"}`,
     );
-    // The DM map is internal campaign knowledge, including in Vite development.
-    if (
-      /(?:^|\/)(?:assets\/dm(?:\/|$)|server\/campaign-map\.json(?:$|\?))/.test(
-        decodeURIComponent(url.pathname),
-      )
-    )
-      throw new GameError("Not found.", 404);
+    // Decode repeatedly so encoded path separators, @fs and ?raw requests
+    // receive the same denial before Vite can transform private source files.
+    if (privatePath(req.url ?? "/")) throw new GameError("Not found.", 404);
     if (url.pathname.startsWith("/api/")) {
       const origin = req.headers.origin;
       if (origin && new URL(origin).host !== req.headers.host)
@@ -109,11 +110,29 @@ const server = createServer(async (req, res) => {
       if (req.method === "GET" && url.pathname === "/api/config")
         return json(res, {
           aiAvailable: !!settings.key,
+          hostAccessRequired: hostAccess.required,
           realtimeModel: settings.realtimeModel,
           imageModel: settings.imageModel,
           imageEditModel: settings.falKey ? kleinModel : null,
         });
+      if (req.method === "GET" && url.pathname === "/api/host-access")
+        return json(res, {
+          required: hostAccess.required,
+          authenticated: hostAccess.authenticated(req),
+        });
+      if (req.method === "POST" && url.pathname === "/api/host-access") {
+        const { key } = z
+          .object({ key: z.string().min(1).max(300) })
+          .parse(await body(req));
+        hostAccess.grant(req, res, key);
+        return json(res, { ok: true });
+      }
       if (req.method === "POST" && url.pathname === "/api/rooms") {
+        if (hostAccess.required && !hostAccess.authenticated(req))
+          throw new GameError(
+            "Host access is required to create a table.",
+            403,
+          );
         const value = createSchema.parse(await body(req));
         const created = store.create(value.name, value.characterId);
         runtime(created.state.id);
@@ -154,6 +173,21 @@ const server = createServer(async (req, res) => {
           201,
         );
       }
+      if (req.method === "POST" && route === "recover") {
+        const { recoveryCode } = z
+          .object({ recoveryCode: z.string().regex(/^[A-Za-z0-9_-]{43}$/) })
+          .parse(await body(req));
+        const recovered = store.recover(id, recoveryCode);
+        const room = runtime(id);
+        room.revokeSeat(recovered.credentials.playerId);
+        const player = room.state.players.find(
+          (p) => p.id === recovered.credentials.playerId,
+        )!;
+        return json(res, {
+          credentials: recovered.credentials,
+          state: projectRoom(room.state, player),
+        });
+      }
       const token = (req.headers.authorization ?? "").replace(/^Bearer /, "");
       // Image requests use an HttpOnly room cookie; API requests use the seat token.
       const cookieToken = req.headers.cookie
@@ -189,6 +223,24 @@ const server = createServer(async (req, res) => {
       }
       if (req.method !== "POST") throw new GameError("Not found.", 404);
       const value = await body(req);
+      if (route === "party-chat")
+        return json(res, room.partyChat(player, value));
+      if (route === "recovery") {
+        const { characterId } = z
+          .object({ characterId: z.enum(["sam", "liz"]) })
+          .parse(value);
+        return json(res, store.recovery(token, id, characterId));
+      }
+      if (route === "rest") {
+        z.object({}).strict().parse(value);
+        return json(res, room.rest());
+      }
+      if (route === "check-cancel") {
+        const { checkId } = z
+          .object({ checkId: z.string().uuid() })
+          .parse(value);
+        return json(res, room.cancelCheck(player, checkId));
+      }
       if (route === "puzzle-answer") {
         const v = z
           .object({
@@ -199,8 +251,13 @@ const server = createServer(async (req, res) => {
         return json(res, room.puzzleAnswer(player, v.puzzleId, v.answer));
       }
       if (route === "puzzle-hint") {
-        const v = z.object({ puzzleId: z.string().max(60) }).parse(value);
-        return json(res, room.puzzleHint(v.puzzleId));
+        const v = z
+          .object({
+            puzzleId: z.string().max(60),
+            expectedHintCount: z.number().int().min(0).max(3).optional(),
+          })
+          .parse(value);
+        return json(res, room.puzzleHint(v.puzzleId, v.expectedHintCount));
       }
       if (route === "background") {
         const v = z
@@ -263,15 +320,35 @@ const server = createServer(async (req, res) => {
       throw new GameError("Not found.", 404);
     }
     if (vite) {
-      vite.middlewares(req, res);
+      if (
+        ["/", "/whispering-sands", "/whispering-sands/"].includes(url.pathname)
+      )
+        req.url = "/index.html" + url.search;
+      vite.middlewares(req, res, (error?: unknown) => {
+        json(
+          res,
+          { error: error ? "Preview request failed." : "Not found." },
+          error ? 500 : 404,
+        );
+      });
       return;
     }
     const root = resolve("output/web");
-    const path = resolve(root, "." + url.pathname);
+    const path = resolve(root, "." + decodeURIComponent(url.pathname));
     if (path !== root && !path.startsWith(root + "/"))
       throw new GameError("Not found.", 404);
-    const target =
-      existsSync(path) && extname(path) ? path : resolve(root, "index.html");
+    // Only the catalogue root and game entry route serve the SPA shell.
+    const target = ["/", "/whispering-sands", "/whispering-sands/"].includes(
+      url.pathname,
+    )
+      ? resolve(root, "index.html")
+      : path;
+    if (
+      !existsSync(target) ||
+      !statSync(target).isFile() ||
+      !realpathSync(target).startsWith(realpathSync(root) + "/")
+    )
+      throw new GameError("Not found.", 404);
     const contentTypes: Record<string, string> = {
       ".html": "text/html",
       ".js": "text/javascript",
@@ -308,7 +385,10 @@ server.on("upgrade", (req, socket, head) => {
     req.url ?? "/",
     `http://${req.headers.host ?? "localhost"}`,
   );
-  if (url.pathname !== "/api/live") return;
+  if (url.pathname !== "/api/live") {
+    socket.destroy();
+    return;
+  }
   if (
     req.headers.origin &&
     new URL(req.headers.origin).host !== req.headers.host
@@ -355,8 +435,16 @@ server.on("upgrade", (req, socket, head) => {
           room.connect(ws, found.player);
           return;
         }
+        // Recovery revokes an already-authenticated socket immediately, including
+        // messages queued while its close handshake is still in progress.
+        if (!room.clients.has(ws))
+          throw new GameError("This seat connection has been replaced.", 401);
         const event = socketMessage.parse(value);
         const player = room.state.players.find((p) => p.id === playerId)!;
+        if (event.type === "party_start") room.beginPartyFloor(player);
+        if (event.type === "party_end") room.endPartyFloor(player.id);
+        if (event.type === "party_audio")
+          room.partyAudio(player.id, event.data);
         if (event.type === "voice_start") await room.startVoice(player);
         if (event.type === "voice_stop") room.leaveVoice(player.id);
         if (event.type === "floor_start") room.beginFloor(player);
@@ -405,3 +493,24 @@ async function shutdown() {
 }
 process.on("SIGTERM", () => void shutdown());
 process.on("SIGINT", () => void shutdown());
+
+function privatePath(rawUrl: string) {
+  let path = rawUrl.split("?")[0];
+  try {
+    for (let i = 0; i < 4; i++) {
+      const decoded = decodeURIComponent(path);
+      if (decoded === path) break;
+      path = decoded;
+    }
+  } catch {
+    return true;
+  }
+  path = path.replaceAll("\\", "/").toLowerCase();
+  // Project-root Markdown is campaign/operational source, never a public asset.
+  return (
+    /(?:^|\/)(?:server|data|assets\/dm)(?:\/|$)/.test(path) ||
+    /(?:^|\/)(?:\.env(?:[^/]*|$)|\.git)(?:\/|$)/.test(path) ||
+    /\.md$/.test(path) ||
+    /(?:^|\/)\.env[^/]*$/.test(path)
+  );
+}

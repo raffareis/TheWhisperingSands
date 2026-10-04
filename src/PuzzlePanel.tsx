@@ -1,16 +1,24 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Credentials, RoomState } from "../shared/types";
 export function PuzzlePanel({
   room,
   credentials,
+  readingMode,
+  setReadingMode,
 }: {
   room: RoomState;
   credentials: Credentials;
+  readingMode: boolean;
+  setReadingMode: (value: boolean) => void;
 }) {
   const [answer, setAnswer] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const p = room.puzzleView;
+  useEffect(() => {
+    setAnswer("");
+    setMessage("");
+  }, [p?.id]);
   if (!p) return null;
   const character = room.players.find(
     (p) => p.id === credentials.playerId,
@@ -46,9 +54,20 @@ export function PuzzlePanel({
     }
   }
   return (
-    <section className="puzzle-panel" aria-labelledby="puzzle-title">
+    <section
+      className={`puzzle-panel ${readingMode ? "reading-mode" : ""}`}
+      aria-labelledby="puzzle-title"
+    >
       <div className="section-eyebrow">
         FIELD EVIDENCE · CHAPTER {room.chapter + 1} / 5
+      </div>
+      <div className="reading-controls">
+        <button
+          aria-pressed={readingMode}
+          onClick={() => setReadingMode(!readingMode)}
+        >
+          {readingMode ? "Reading mode on" : "Enable reading mode"}
+        </button>
       </div>
       <h2 id="puzzle-title">{p.title}</h2>
       <p>{p.premise}</p>
@@ -65,6 +84,19 @@ export function PuzzlePanel({
           Your partner has a different record. Describe this one in English.
         </small>
       </article>
+      {!!p.glossary?.length && (
+        <details className="puzzle-glossary">
+          <summary>Words in this record</summary>
+          <dl>
+            {p.glossary.map(({ term, meaning }) => (
+              <div key={term}>
+                <dt>{term}</dt>
+                <dd>{meaning}</dd>
+              </div>
+            ))}
+          </dl>
+        </details>
+      )}
       <div className="puzzle-status" aria-live="polite">
         Sam's lock: {p.accepted.includes("sam") ? "accepted" : "waiting"} ·
         Liz's lock: {p.accepted.includes("liz") ? "accepted" : "waiting"}
@@ -84,9 +116,10 @@ export function PuzzlePanel({
           }}
         >
           <label htmlFor="puzzle-answer">{p.task}</label>
-          <small>{p.format}</small>
+          <small id="answer-format">{p.format}</small>
           <input
             id="puzzle-answer"
+            aria-describedby="answer-format"
             value={answer}
             maxLength={200}
             autoComplete="off"
@@ -99,13 +132,20 @@ export function PuzzlePanel({
           </button>
         </form>
       )}
-      {!p.solved && (
+      {(p.hints.length > 0 || !p.solved) && (
         <div className="puzzle-hints">
           <button
-            disabled={busy || p.hints.length >= 3}
-            onClick={() => void send("puzzle-hint", { puzzleId: p.id })}
+            disabled={busy || p.hints.length >= 3 || p.solved}
+            onClick={() =>
+              void send("puzzle-hint", {
+                puzzleId: p.id,
+                expectedHintCount: p.hints.length,
+              })
+            }
           >
-            Reveal hint {Math.min(p.hints.length + 1, 3)} of 3
+            {p.hints.length >= 3
+              ? "All three hints are open"
+              : `Reveal hint ${p.hints.length + 1} of 3`}
           </button>
           <small>No time penalty. No HP lost for trying.</small>
           {p.hints.map((hint, i) => (
@@ -142,7 +182,9 @@ export function PuzzlePanel({
           .map((j) => (
             <p key={j.id}>
               {j.task.replaceAll("_", " ")}: {j.status}
-              {j.error ? ` — ${j.error}` : ""}
+              {j.status === "error"
+                ? " — Your helper is unavailable. Try again later."
+                : ""}
             </p>
           ))}
         {room.learningNotes

@@ -54,3 +54,42 @@ test("the DM receives compact spatial context; players and illustration workers 
     true,
   );
 });
+
+test("Palm Camp shelter is accessible before the chest, while crossing evidence stays gated", () => {
+  const state = initialState("shelter-map");
+  state.scene.locationId = "palm_camp";
+  state.scene.location = "The open store porch";
+  const camp = campaignMapContext(state);
+  assert.equal(camp.area.id, "palm_camp");
+  assert.equal(camp.area.first_chapter, 0);
+  assert.equal(camp.area_is_chapter_anchor, false);
+  const beachPath = campaignMap.edges.find(
+    (e) => e.from === "wreck_beach" && e.to === "palm_camp",
+  )!;
+  assert.equal(beachPath.gate, null);
+  const crossing = camp.nearby_routes.find(
+    (e) => e.to === "nine_stone_crossing",
+  )!;
+  assert.equal(crossing.gate?.puzzle_id, "salvage-lock");
+  assert.equal(crossing.gate?.solved, false);
+  state.puzzles![0].solved = true;
+  assert.equal(
+    campaignMapContext(state).nearby_routes.find(
+      (e) => e.to === "nine_stone_crossing",
+    )!.gate?.solved,
+    true,
+  );
+});
+
+test("structured location wins over descriptive text; future locations do not teleport the party", () => {
+  const state = initialState("map-location");
+  state.chapter = 2;
+  state.scene.locationId = "keeper_archive";
+  state.scene.location = "A room overlooking Wreck Beach";
+  assert.equal(campaignMapContext(state).area.id, "keeper_archive");
+  state.chapter = 0;
+  state.scene.locationId = "beacon_gallery";
+  state.scene.location = "An unknown location";
+  assert.equal(campaignMapContext(state).area.id, "wreck_beach");
+  assert.equal(campaignMapContext(state).area_is_chapter_anchor, true);
+});
