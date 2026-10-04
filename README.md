@@ -117,6 +117,12 @@ A prova pública confirmou dois clientes WebSocket, convite sem código de anfit
 áudio direto entre os assentos, recuperação com revogação e sete fontes privadas
 negadas. Catálogo, acesso privado do anfitrião e mesa em viewport de 390 px foram
 inspecionados com NVIDIA GeForce RTX 4060, sem overflow horizontal.
+A voz real foi exercitada pelo domínio em duas sessões consecutivas, desligando
+e reativando o mestre: 50 e 57 blocos de áudio idênticos nos dois assentos,
+atribuição correta a Sam e narrações concluídas em 34 segundos no total.
+A retomada limpa os IDs de áudio da sessão anterior; a regressão integra os
+68 testes. Evidência privada: `output/verification/public-voice-reopen.json`.
+A entrega e os achados ASTRA são registrados em #6 e #5.
 
 ## Estado e regras
 
