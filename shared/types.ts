@@ -52,6 +52,13 @@ export interface Scene {
   imageUrl: string;
   status: "ready" | "generating" | "error";
   error?: string;
+  chapter?: number;
+  edit?: {
+    kind: "pose" | "lighting" | "weather" | "object_state";
+    change: string;
+    sourceSceneId: string;
+  };
+  editDepth?: number;
 }
 export interface RoomState {
   id: string;
@@ -97,6 +104,7 @@ export interface Configuration {
   aiAvailable: boolean;
   realtimeModel: string;
   imageModel: string;
+  imageEditModel: string | null;
 }
 
 export interface PuzzleProgress {
@@ -133,4 +141,11 @@ export interface WorkerJob {
   outputTokens?: number;
   cachedTokens?: number;
   error?: string;
+  fallbackReason?: string;
+  imageAttempts?: {
+    model: string;
+    status: "submitted" | "ready" | "error";
+    durationMs?: number;
+    requestId?: string;
+  }[];
 }

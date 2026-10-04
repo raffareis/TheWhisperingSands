@@ -12,6 +12,7 @@ import { RoomStore, GameError } from "./store.js";
 import { RoomRuntime, socketMessage, type Settings } from "./runtime.js";
 import { projectRoom } from "./puzzles.js";
 import { rollCheck, rerollCheck, acceptRoll } from "./game.js";
+import { kleinModel } from "./image-edits.js";
 if (existsSync(".env")) process.loadEnvFile(".env");
 const production = process.env.NODE_ENV === "production";
 const port = Number(process.env.PORT ?? 4317);
@@ -21,6 +22,7 @@ const settings: Settings = {
   textModel: process.env.OPENAI_TEXT_MODEL ?? "gpt-6.1-sol",
   realtimeModel: process.env.OPENAI_REALTIME_MODEL ?? "gpt-realtime-2.1",
   imageModel: process.env.OPENAI_IMAGE_MODEL ?? "gpt-image-2.5-flare",
+  falKey: process.env.FAL_KEY ?? "",
   workerModel: process.env.OPENAI_WORKER_MODEL ?? "gpt-5.4-nano",
   ...(process.env.SYSTEM_ONE_BASE_URL
     ? {
@@ -109,6 +111,7 @@ const server = createServer(async (req, res) => {
           aiAvailable: !!settings.key,
           realtimeModel: settings.realtimeModel,
           imageModel: settings.imageModel,
+          imageEditModel: settings.falKey ? kleinModel : null,
         });
       if (req.method === "POST" && url.pathname === "/api/rooms") {
         const value = createSchema.parse(await body(req));

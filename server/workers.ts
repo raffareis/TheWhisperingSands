@@ -4,6 +4,12 @@ import { join, resolve } from "node:path";
 import { z } from "zod";
 import type { RoomState, Scene, WorkerJob } from "../shared/types.js";
 import type { RoomStore } from "./store.js";
+import {
+  editFrame,
+  fastEditSource,
+  FastEditError,
+  kleinModel,
+} from "./image-edits.js";
 export const dispatchSchema = z.object({
   task: z.enum(["illustration", "recap", "language_coach"]),
   contextId: z.string().min(1).max(120),
@@ -22,6 +28,7 @@ interface Catalog {
 export interface WorkerSettings {
   key: string;
   imageModel: string;
+  falKey?: string;
   workerModel?: string;
   dataDir: string;
   systemOne?: { baseUrl: string; model: string; key: string; shadow?: boolean };
@@ -387,6 +394,82 @@ export class BackgroundWorkers {
     snapshot: RoomState,
     signal: AbortSignal,
   ) {
+    const source = this.settings.falKey
+      ? fastEditSource(snapshot, this.settings.dataDir)
+      : null;
+    if (source) {
+      try {
+        const result = await this.imageAttempt(job, kleinModel, () =>
+          editFrame(
+            source.bytes,
+            snapshot.scene.edit!.change,
+            this.settings.falKey!,
+            signal,
+            this.request,
+          ),
+        );
+        await this.saveImage(job, snapshot, signal, result.bytes, source.depth);
+        return;
+      } catch (error) {
+        // No retry after abort, timeout/network ambiguity or safety rejection.
+        if (
+          signal.aborted ||
+          this.closed ||
+          !(error instanceof FastEditError) ||
+          !error.allowFallback
+        )
+          throw error;
+        this.patch(job.id, { fallbackReason: error.message });
+        // Fallback is a second paid attempt, counted in the durable budget.
+        this.store.reserveWorker(snapshot.id, "illustration");
+      }
+    }
+    await this.imageAttempt(job, this.settings.imageModel, () =>
+      this.compose(job, snapshot, signal),
+    );
+  }
+  private async imageAttempt<T>(
+    job: WorkerJob,
+    model: string,
+    render: () => Promise<T>,
+  ): Promise<T> {
+    const current = this.state().workers?.find((j) => j.id === job.id);
+    const attempts = current?.imageAttempts ?? [];
+    const attempt: NonNullable<WorkerJob["imageAttempts"]>[number] = {
+      model,
+      status: "submitted",
+    };
+    const index = attempts.length;
+    this.patch(job.id, { model, imageAttempts: [...attempts, attempt] });
+    this.publish();
+    const start = Date.now();
+    try {
+      const result = await render();
+      Object.assign(attempt, {
+        status: "ready",
+        durationMs: Date.now() - start,
+        ...(result && typeof result === "object" && "requestId" in result
+          ? { requestId: result.requestId }
+          : {}),
+      });
+      return result;
+    } catch (error) {
+      Object.assign(attempt, {
+        status: "error",
+        durationMs: Date.now() - start,
+      });
+      throw error;
+    } finally {
+      // State can be cloned while the provider is working.
+      const latest = this.state().workers?.find((j) => j.id === job.id);
+      if (latest?.imageAttempts) latest.imageAttempts[index] = attempt;
+    }
+  }
+  private async compose(
+    job: WorkerJob,
+    snapshot: RoomState,
+    signal: AbortSignal,
+  ) {
     const catalog = readCatalog();
     let references = availableReferences(snapshot, catalog);
     const environments = references.filter((a) => a.role === "environment");
@@ -446,21 +529,33 @@ export class BackgroundWorkers {
     const b64 = result.data?.[0]?.b64_json;
     if (typeof b64 !== "string")
       throw new Error("Illustration worker returned no image.");
+    await this.saveImage(job, snapshot, signal, Buffer.from(b64, "base64"), 0);
+    this.usage(job.id, result.usage);
+  }
+  private async saveImage(
+    job: WorkerJob,
+    snapshot: RoomState,
+    signal: AbortSignal,
+    bytes: Buffer,
+    editDepth: number,
+  ) {
     const approved = this.approvals.get(job.id);
     if (approved && !(await approved.promise)) return;
-    if (signal.aborted || this.closed) return;
+    if (
+      signal.aborted ||
+      this.closed ||
+      this.state().scene.id !== snapshot.scene.id
+    )
+      return;
     const scene = this.scene(snapshot.scene.id);
     if (!scene) return;
     const directory = join(this.settings.dataDir, "images", snapshot.id);
     mkdirSync(directory, { recursive: true });
-    writeFileSync(
-      join(directory, `${scene.id}.webp`),
-      Buffer.from(b64, "base64"),
-    );
+    writeFileSync(join(directory, `${scene.id}.webp`), bytes);
     scene.imageUrl = `/api/rooms/${snapshot.id}/images/${scene.id}.webp`;
     scene.status = "ready";
+    scene.editDepth = editDepth;
     delete scene.error;
-    this.usage(job.id, result.usage);
   }
   private async note(job: WorkerJob, snapshot: RoomState, signal: AbortSignal) {
     const instruction =

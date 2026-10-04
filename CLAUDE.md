@@ -40,7 +40,14 @@ WebSocket e restringir criação de mesas antes de expor a API paga.
 
 `bin/check-live.ts` e `bin/check-workers.ts` são provas explícitas com chamadas pagas. Não executá-la
 em testes comuns. Reutilizar prova válida e investigar falhas antes de repetir.
-`bin/compare-fal.ts` é experimento pago, sem alterar o provedor ativo da mesa.
+`bin/compare-fal.ts` é experimento pago. `server/image-edits.ts` implementa
+o caminho Klein 9B autorizado em #4: mesma sala/local/elenco conhecido/capítulo,
+frame imediatamente anterior confirmado, no máximo duas edições em sequência.
+O DM fornece apenas `edit.kind` e uma mudança curta. Composições novas são Flare.
+`FAL_ENV_FILE` carrega a chave privada separada no launcher; sem chave, usa Flare.
+Fallback após rejeição HTTP definitiva consome outra reserva de orçamento;
+abort, erro incerto e rejeição de segurança não causam segunda chamada.
+`bin/check-hybrid.ts` é prova paga isolada com checkpoint, nunca teste comum.
 `FAL_KEY` vem de configuração privada. Exemplos e limites observados no README.
 Edição do frame prévio não prova qualidade de uma composição nova. Guardar outputs
 somente em `output/verification/fal/`, nunca cartões ou mapa entre as referências.

@@ -350,11 +350,16 @@ export function applyConsequences(state: RoomState, raw: unknown) {
     chapter: state.chapter,
   };
 }
+export const visualEditSchema = z.object({
+  kind: z.enum(["pose", "lighting", "weather", "object_state"]),
+  change: z.string().trim().min(5).max(300),
+});
 export const sceneSchema = z.object({
   title: z.string().min(1).max(100),
   location: z.string().min(1).max(100),
   description: z.string().min(1).max(600),
   visualPrompt: z.string().min(10).max(1800),
+  edit: visualEditSchema.nullable().optional(),
 });
 export function setScene(state: RoomState, raw: unknown) {
   const v = sceneSchema.parse(raw);
@@ -367,6 +372,8 @@ export function setScene(state: RoomState, raw: unknown) {
     prompt: v.visualPrompt,
     imageUrl: state.scene.imageUrl,
     status: "generating",
+    chapter: state.chapter,
+    ...(v.edit ? { edit: { ...v.edit, sourceSceneId: state.scene.id } } : {}),
   };
   return state.scene;
 }

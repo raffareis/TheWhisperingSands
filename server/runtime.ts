@@ -1,4 +1,5 @@
 import WebSocket from "ws";
+import { kleinModel } from "./image-edits.js";
 
 import { z } from "zod";
 import type {
@@ -125,6 +126,7 @@ export class RoomRuntime {
       aiAvailable: !!this.settings.key,
       realtimeModel: this.settings.realtimeModel,
       imageModel: this.settings.imageModel,
+      imageEditModel: this.settings.falKey ? kleinModel : null,
     };
   }
   send(ws: WebSocket, value: unknown) {

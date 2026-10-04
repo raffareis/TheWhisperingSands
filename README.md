@@ -248,6 +248,54 @@ novas; não repete voz ou os helpers já verificados. Para reproduzi-la explicit
 node --env-file=.env --import tsx bin/check-workers.ts --sunburst-scene
 ```
 
+### Cenas híbridas
+
+Com `FAL_KEY` no servidor, o DM pode adicionar
+`edit:{kind:"pose",change:"Emily lowers her pointing arm."}` à ferramenta
+`illustrate_scene`. O campo aceita também `lighting`, `weather` e `object_state`.
+O mestre mantém uma descrição pública factual; para novas pessoas, locais ou
+composições usa `edit:null`. A edição não recebe cartões, soluções ou mapa,
+somente a mudança pública curta e o frame anterior. Não há chamada de
+classificador para escolher o renderer.
+
+O worker verifica o frame imediatamente anterior, confirmado e gerado na
+própria sala; local e elenco conhecido precisam coincidir, e o capítulo não
+pode mudar. Assets base, placeholders herdados, arquivos ausentes e cenas
+antigas sem capítulo seguem pelo Flare. Depois de duas edições consecutivas,
+uma composição Flare restabelece a referência e zera a profundidade. A detecção
+de elenco compara Sam/Liz/Emily mencionados; não substitui a obrigação do DM
+de declarar uma composição nova quando introduzir outras pessoas.
+
+Klein usa o endpoint direto com quatro steps e entrada/saída inline em WebP
+1536×1024. Uma rejeição HTTP definitiva (400/401/403/404/422/429) permite uma
+única composição Flare de fallback, reservando outra tentativa no orçamento
+durável. Abort, timeout de 30 s, erro de rede/5xx, resposta inválida ou rejeição
+de segurança preservam a imagem anterior e encerram o job; não repetem uma
+chamada paga de resultado incerto. Jobs registram cada tentativa/modelo/tempo
+e request ID quando disponível. Sem `FAL_KEY`, o renderer é somente Flare.
+
+Para carregar as duas chaves de arquivos privados separados:
+
+```bash
+OPENAI_ENV_FILE=/caminho/privado/openai.env \
+FAL_ENV_FILE=/caminho/privado/fal.env ./bin/dev
+```
+
+`/api/config` informa `imageModel` e `imageEditModel`, nunca as chaves.
+A prova isolada `bin/check-hybrid.ts` reutiliza a composição Flare já aprovada
+e faz uma única edição real pelo worker; não inicia voz nem altera salas dos
+jogadores. Requer ambas as chaves no ambiente e a prova anterior Sunburst.
+Guarda estado e imagem em `output/verification/hybrid-data/` e checkpoint em
+`output/verification/hybrid-live.json`; se o checkpoint existe, recusa uma nova
+cobrança até reconciliação explícita.
+
+Na prova real do worker em 2026-10-04, uma edição Klein terminou em **9,612 s**,
+sem fallback e com uma chamada; elenco e textura preservados na inspeção,
+Emily com as mãos no colo. A latência variou em relação ao experimento anterior
+de 5,614 s. Foram verificados roteamento, orçamento extra no fallback,
+confirmação/cancelamento, respostas inválidas e isolamento dos arquivos.
+Não houve nova validação com microfones nem medição p50/p95.
+
 ### Experimento fal.ai
 
 Em 2026-10-04, sete gerações explícitas compararam a mesma composição com quatro
@@ -270,11 +318,11 @@ A inferência caiu de 1,367 s para 0,860 s, mas o restante da chamada dominou o
 tempo. Não medimos separadamente rede, pré-processamento e serialização.
 São amostras isoladas, sem p50/p95 nem custo faturado verificado.
 
-Recomendação: manter Sunburst no banco base e Flare para novas composições ou
-mudanças grandes; experimentar Klein 9B para pequenas atualizações usando o
-último frame aprovado. A edição reaproveita uma composição Flare existente e
-não prova capacidade de montar uma cena nova com a mesma qualidade. O app
-continua usando Flare; a fal.ai está somente no experimento [#3](https://github.com/raffareis/TheWhisperingSands/issues/3).
+O experimento [#3](https://github.com/raffareis/TheWhisperingSands/issues/3) orientou
+o fluxo híbrido autorizado em [#4](https://github.com/raffareis/TheWhisperingSands/issues/4):
+Sunburst no banco base, Flare para novas composições e Klein 9B para pequenas
+edições. Editar um frame existente não prova capacidade de compor uma cena nova
+com a mesma qualidade.
 
 ```bash
 # Chamadas pagas explícitas, no máximo três por execução:
