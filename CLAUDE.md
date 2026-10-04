@@ -5,7 +5,7 @@ Escopo inicial: [#1](https://github.com/raffareis/TheWhisperingSands/issues/1). 
 O README documenta execução, regras e limites observados. O portal da Meg fica
 em meg.raffareis.com; a atividade RPG tem rota /whispering-sands. Catálogo público
 em shared/activities.ts, sem fontes da campanha ou atividades fictícias.
-Entrega jogável e publicação: #6; achados ASTRA: #5. Gestão de aulas/duplas: #7. Direção visual Opus 5.5: #8.
+Entrega jogável e publicação: #6; achados ASTRA: #5. Gestão de aulas/duplas: #7. Direção visual Opus 5.5: #8. Texto e ajuda contextual: #9.
 Teacher desk em /teacher, privado, com turmas/notas/pausa/retomada e links
 permanentes por aluno. A professora não ocupa um assento.
 

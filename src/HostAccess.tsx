@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { HelpTip } from "./HelpTip";
 
 export function HostAccess({
   onReady,
@@ -43,14 +44,18 @@ export function HostAccess({
     if (key.trim() && !busy) void unlock(key.trim());
   }
   return (
-    <section className="host-access" aria-labelledby="host-access-title">
-      <h3 id="host-access-title">Host access</h3>
-      <p>
-        Enter your private host code to manage classes and create tables.
-        Players with an invitation or return link can join directly.
-      </p>
+    <section className="host-access" aria-label="Host access">
       <form onSubmit={submit}>
-        <label htmlFor="host-code">Host code</label>
+        <div className="host-access-label">
+          <label htmlFor="host-code">Host code</label>
+          <HelpTip
+            label="Who needs a host code?"
+            text={[
+              "Only the teacher: it unlocks classes and new tables.",
+              "Students open the private link from their teacher instead.",
+            ]}
+          />
+        </div>
         <input
           id="host-code"
           type="password"
@@ -62,7 +67,7 @@ export function HostAccess({
           disabled={busy || opening}
         />
         <button className="primary" disabled={busy || opening || !key.trim()}>
-          {busy || opening ? "Opening host access…" : "Open host access"}
+          {busy || opening ? "Unlocking…" : "Unlock"}
         </button>
       </form>
       {error && <p role="alert">{error}</p>}

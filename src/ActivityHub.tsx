@@ -1,4 +1,4 @@
-import { ArrowRight, ArrowUpRight } from "lucide-react";
+import { ArrowRight, ArrowUpRight, Languages, Mic, Users } from "lucide-react";
 import { useEffect } from "react";
 import { activities } from "../shared/activities";
 import "./activity-hub.css";
@@ -19,12 +19,7 @@ export default function ActivityHub() {
       </header>
       <main>
         <section className="hub-intro">
-          <h1 id="hub-title">Activities for speaking English in pairs</h1>
-          <p>
-            Each activity is played by two students, in English, across one or
-            more lessons. Your teacher sends each of you a private link; it
-            always brings you back to where you stopped.
-          </p>
+          <h1 id="hub-title">Speaking activities for pairs</h1>
         </section>
         <ol className="hub-list" aria-labelledby="hub-title">
           {activities.map((activity, index) => (
@@ -47,41 +42,31 @@ export default function ActivityHub() {
                   <a href={activity.path}>{activity.title}</a>
                 </h2>
                 <p className="hub-description">{activity.description}</p>
-                <dl className="hub-facts">
-                  <div>
-                    <dt>Players</dt>
-                    <dd>{activity.players}</dd>
-                  </div>
-                  <div>
-                    <dt>Language</dt>
-                    <dd>{activity.language}</dd>
-                  </div>
-                  <div>
-                    <dt>Play by</dt>
-                    <dd>{activity.modes}</dd>
-                  </div>
-                </dl>
+                <ul className="hub-facts">
+                  <li>
+                    <Users size={16} aria-hidden="true" />
+                    {activity.players}
+                  </li>
+                  <li>
+                    <Languages size={16} aria-hidden="true" />
+                    {activity.language}
+                  </li>
+                  <li>
+                    <Mic size={16} aria-hidden="true" />
+                    {activity.modes}
+                  </li>
+                </ul>
                 <a className="hub-open" href={activity.path}>
-                  Open the activity <ArrowRight size={18} aria-hidden="true" />
+                  Open <ArrowRight size={18} aria-hidden="true" />
                 </a>
                 <p className="hub-return">
-                  Already playing? Open your private link instead. It returns
-                  you to your own seat.
+                  Already playing? Use your private link.
                 </p>
               </div>
             </li>
           ))}
         </ol>
-        {activities.length === 1 && (
-          <p className="hub-later">
-            {activities[0].title} is the first activity here. New ones will be
-            added to this list.
-          </p>
-        )}
       </main>
-      <footer className="hub-footer">
-        Meg’s classroom · English activities
-      </footer>
     </div>
   );
 }

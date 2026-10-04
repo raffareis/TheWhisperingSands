@@ -93,9 +93,7 @@ export function Inventory({ items, owner }: { items: Item[]; owner: string }) {
           })}
         </ul>
       ) : (
-        <p className="empty-inventory">
-          No objects carried yet. Finds from the island will appear here.
-        </p>
+        <p className="empty-inventory">No objects yet.</p>
       )}
     </section>
   );

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Mic, Volume2, VolumeX, Send } from "lucide-react";
+import { HelpTip } from "./HelpTip";
 import type { Credentials, RoomState } from "../shared/types";
 
 export interface PartyVoice {
@@ -72,9 +73,13 @@ export function PartyPanel({
         <h2 id="discussion-title">
           {companion ? `Talk with ${companion.name}` : "Discuss together"}
         </h2>
-        <p>
-          Compare your evidence here. The storyteller waits while you discuss.
-        </p>
+        <HelpTip
+          label="Who sees this conversation?"
+          text={[
+            "Only the two of you see these messages, and they stay saved.",
+            "The storyteller does not read them or hear partner audio. Audio is never recorded.",
+          ]}
+        />
       </div>
       <div
         className="party-messages"
@@ -106,13 +111,13 @@ export function PartyPanel({
             </article>
           ))
         ) : (
-          <p className="discussion-empty">
-            Your discussion is saved here. Share what you notice.
-          </p>
+          <p className="discussion-empty">No messages yet.</p>
         )}
       </div>
       <form onSubmit={(e) => void discuss(e)} className="discussion-form">
-        <label htmlFor="party-message">Message your companion</label>
+        <label htmlFor="party-message" className="visually-hidden">
+          Message your partner
+        </label>
         <div className="discussion-compose">
           <textarea
             id="party-message"
@@ -138,7 +143,7 @@ export function PartyPanel({
         </p>
       )}
       <details className="negotiation-phrases">
-        <summary>Useful phrases, if you need them</summary>
+        <summary>Useful phrases</summary>
         <ul>
           <li>“What does yours say about ___?”</li>
           <li>“Do you mean ___ or ___?”</li>
@@ -159,8 +164,8 @@ export function PartyPanel({
           {voice.loading
             ? "Opening audio…"
             : voice.enabled
-              ? "Leave companion audio"
-              : "Enable companion audio"}
+              ? "Leave partner audio"
+              : "Join partner audio"}
         </button>
         {voice.enabled && (
           <button
@@ -177,19 +182,15 @@ export function PartyPanel({
             aria-pressed={voice.talking}
           >
             <Mic size={16} />
-            {voice.talking
-              ? "Finish speaking to companion"
-              : "Talk to companion"}
+            {voice.talking ? "Stop talking" : "Talk to partner"}
           </button>
         )}
         <p role="status">
           {voice.talking
-            ? "Your companion can hear you. Tap again to finish."
+            ? "Your partner can hear you."
             : speaker
-              ? `${speaker.name} is speaking to the companion.`
-              : voice.enabled
-                ? "You can hear your companion. Talking asks for microphone access."
-                : "Optional audio between the two of you. The storyteller does not hear it."}
+              ? `${speaker.name} is speaking.`
+              : ""}
         </p>
       </div>
     </section>

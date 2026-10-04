@@ -7,7 +7,7 @@ export const activities = [
     title: "The Whispering Sands",
     category: "A cooperative island mystery",
     description:
-      "Shipwrecked on an unfamiliar island, compare private clues, solve puzzles and find your way home with an AI storyteller.",
+      "Two castaways, two private clues and an AI storyteller. Solve it by talking in English.",
     image: "/art/coastal-field-study-sunburst.webp",
     imageAlt: "A painted coastal expedition study in sand and sea-green tones",
     players: "Two players",

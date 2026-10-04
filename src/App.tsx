@@ -54,6 +54,7 @@ import { Inventory } from "./Inventory";
 import { PartyPanel } from "./PartyPanel";
 import { usePartyAudio } from "./usePartyAudio";
 import { HostAccess } from "./HostAccess";
+import { HelpTip } from "./HelpTip";
 import { rememberSeat, savedSeats, type SavedSeat } from "./seats";
 const emptyLive: LiveState = {
   dmStatus: "offline",
@@ -92,12 +93,12 @@ function playerMessage(message: string) {
     : message;
 }
 const statusText = {
-  offline: "Voice is resting",
-  connecting: "Waking the storyteller…",
-  ready: "The storyteller is listening",
-  thinking: "The storyteller is thinking…",
-  speaking: "The storyteller is speaking",
-  error: "The storyteller needs a moment",
+  offline: "Voice off",
+  connecting: "Connecting…",
+  ready: "Listening",
+  thinking: "Thinking…",
+  speaking: "Speaking",
+  error: "Needs a moment",
 };
 export default function App() {
   const [credentials, setCredentials] = useState<Credentials | null>(stored);
@@ -748,13 +749,6 @@ export default function App() {
         </header>
         <main className="welcome-layout">
           <section className="welcome-copy">
-            <h1>
-              Washed ashore. <em>Not alone.</em>
-            </h1>
-            <p>
-              A cooperative island mystery for two players. Each of you holds a
-              different record; compare them in English to find a way home.
-            </p>
             <figure className="arrival-plate">
               <img
                 src="/art/coastal-field-study-sunburst.webp"
@@ -763,81 +757,56 @@ export default function App() {
             </figure>
           </section>
           <section className="entry-card">
-            <h2>
+            <h1>
               {joining
-                ? "A companion is waiting."
+                ? "Join the adventure"
                 : recoveryRequest || credentials
-                  ? "Return to your adventure"
+                  ? seatUnavailable
+                    ? "Can’t open your seat"
+                    : "Returning to your table…"
                   : needsHostAccess
                     ? "Teacher access"
                     : "Who are you?"}
-            </h2>
-            <p>
-              {joining
-                ? "Join the same island, the same choices, the same storyteller."
-                : recoveryRequest || credentials
-                  ? "Your discoveries stay with your table."
-                  : needsHostAccess
-                    ? "Open your private access to create an adventure. Students join with the links their teacher sends."
-                    : "Choose a character, then invite your companion to take the other seat."}
-            </p>
-            {recoveryRequest ? (
+            </h1>
+            {(recoveryRequest || credentials) && !joining ? (
               <div className="saved-adventures">
-                <h3>
-                  {seatUnavailable
-                    ? "Your return link needs renewing."
-                    : "Returning to your adventure…"}
-                </h3>
-                <p>
-                  {seatUnavailable
-                    ? "Ask your companion to open Table settings and choose Help partner return. Your name, discoveries and journal stay with the table."
-                    : "Restoring your character and saved progress."}
-                </p>
-                <button className="subtle" disabled={busy} onClick={leave}>
+                {seatUnavailable && (
+                  <p>
+                    Ask your teacher or partner for a new link. Your progress is
+                    saved.
+                  </p>
+                )}
+                <button
+                  className="subtle"
+                  disabled={busy && !!recoveryRequest}
+                  onClick={leave}
+                >
                   Back to entrance
                 </button>
               </div>
-            ) : credentials && !joining ? (
-              <div className="saved-adventures">
-                <h3>
-                  {seatUnavailable
-                    ? "Your saved seat needs help."
-                    : "Returning to your table…"}
-                </h3>
-                <p>
-                  {seatUnavailable
-                    ? "Ask your companion for a return link from Table settings. You can also return to the entrance and start another table."
-                    : "Your adventure and journal are waiting."}
-                </p>
-                <button className="subtle" onClick={leave}>
-                  Back to entrance · keep saved adventure
-                </button>
-              </div>
             ) : needsHostAccess ? (
-              <HostAccess
-                busy={hostBusy}
-                onReady={() => {
-                  setHostAccess({ required: true, authenticated: true });
-                  setError("");
-                }}
-              />
+              <>
+                <p>Students: open the link from your teacher.</p>
+                <HostAccess
+                  busy={hostBusy}
+                  onReady={() => {
+                    setHostAccess({ required: true, authenticated: true });
+                    setError("");
+                  }}
+                />
+              </>
             ) : (
               <form onSubmit={enter}>
                 <label htmlFor="player-name">Your name</label>
                 <input
                   id="player-name"
-                  placeholder="Your name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   required
                   maxLength={40}
                   autoComplete="given-name"
                 />
-                <label>
-                  {joining
-                    ? "Your character is assigned when you join"
-                    : "Choose your character"}
-                </label>
+                {!joining && <label>Choose your character</label>}
                 {!joining && (
                   <div className="character-choice">
                     {(["sam", "liz"] as const).map((id) => (
@@ -870,7 +839,7 @@ export default function App() {
                     <LoaderCircle className="spin" size={18} />
                   ) : (
                     <>
-                      {joining ? "Join the adventure" : "Create your table"}
+                      {joining ? "Join" : "Create table"}
                       <ArrowRight size={18} />
                     </>
                   )}
@@ -885,7 +854,7 @@ export default function App() {
                   className="saved-adventures"
                   aria-label="Saved adventures"
                 >
-                  <h3>Return to a saved adventure</h3>
+                  <h3>Continue</h3>
                   {seats.map((seat) => (
                     <button
                       className="saved-seat"
@@ -906,9 +875,6 @@ export default function App() {
               )}
           </section>
         </main>
-        <footer className="welcome-footer">
-          Inspired by a story made for English class.
-        </footer>
         {error && <Toast text={error} close={() => setError("")} />}
       </div>
     );
@@ -964,7 +930,7 @@ export default function App() {
           {state.players.length < 2 && (
             <li className="empty-seat">
               <span className="connection-dot" />
-              <span>Second seat open</span>
+              <span>Open seat</span>
             </li>
           )}
         </ul>
@@ -973,14 +939,6 @@ export default function App() {
             <ArrowLeft size={15} />
             <span>All activities</span>
           </a>
-          <button
-            className="subtle"
-            onClick={() => void inviteCompanion()}
-            disabled={busy}
-          >
-            <Link size={15} />
-            <span>Invite companion</span>
-          </button>
           <button
             className="icon-button"
             aria-label="Table settings"
@@ -996,13 +954,11 @@ export default function App() {
           <div>
             <strong>
               {state.lessonStatus === "archived"
-                ? "This adventure is archived."
-                : "Your lesson is paused."}
+                ? "Adventure archived"
+                : "Lesson paused"}
             </strong>
             <p>
-              Your discoveries, objects and journal are saved. You can review
-              them now; your teacher will reopen the table when it is time to
-              continue.
+              Everything is saved. Your teacher reopens the table to continue.
             </p>
           </div>
         </section>
@@ -1030,16 +986,14 @@ export default function App() {
             {state.scene.status === "generating" && (
               <span className="scene-painting" role="status">
                 <LoaderCircle className="spin" size={14} />
-                Painting the next moment…
+                Painting…
               </span>
             )}
           </figure>
           <p className="scene-description">{state.scene.description}</p>
           {state.scene.status === "error" && (
             <div className="scene-error">
-              <span>
-                This illustration is unavailable. Your adventure can continue.
-              </span>
+              <span>Illustration unavailable.</span>
               <button
                 className="subtle"
                 onClick={() =>
@@ -1048,7 +1002,7 @@ export default function App() {
                   )
                 }
               >
-                Try illustration again
+                Retry
               </button>
             </div>
           )}
@@ -1081,11 +1035,9 @@ export default function App() {
                 </h3>
                 <p>{state.pendingCheck.reason}</p>
                 <small>
-                  Roll D6 + {checkCharacter?.stats[state.pendingCheck.stat]}{" "}
-                  {state.pendingCheck.stat} · reach {state.pendingCheck.target}
-                  {state.pendingCheck.dangerous
-                    ? " · a setback costs 1 HP"
-                    : ""}
+                  D6 + {checkCharacter?.stats[state.pendingCheck.stat]}{" "}
+                  {state.pendingCheck.stat} · need {state.pendingCheck.target}
+                  {state.pendingCheck.dangerous ? " · setback costs 1 HP" : ""}
                 </small>
               </div>
               <button
@@ -1123,11 +1075,13 @@ export default function App() {
                 !online(p.id),
             ) && (
               <div className="offline-check">
-                <p>
-                  The player needed for this check is away. Wait for them, help
-                  them return in Table settings, or cancel this check to
-                  continue.
-                </p>
+                <p>{checkCharacter?.shortName}’s player is away.</p>
+                <HelpTip
+                  label="What can we do?"
+                  text={[
+                    "Wait, send them a return link from Table settings, or cancel the check. Cancelling applies no roll and no consequence.",
+                  ]}
+                />
                 <button
                   className="subtle"
                   disabled={busy || !connected}
@@ -1139,7 +1093,7 @@ export default function App() {
                     )
                   }
                 >
-                  Cancel absent companion’s check
+                  Cancel check
                 </button>
               </div>
             )}
@@ -1224,10 +1178,8 @@ export default function App() {
               {caption ||
                 lastDM?.text ||
                 (state.phase === "lobby"
-                  ? state.players.length < 2
-                    ? "The storm has passed. Invite your companion, then begin at the wreck."
-                    : "The storm has passed. Begin at the wreck when you are both ready."
-                  : "The storyteller is gathering the next thread of your adventure…")}
+                  ? "The storm has passed."
+                  : "Waiting for the storyteller…")}
               {caption && <span className="cursor" />}
             </p>
             {state.phase === "lobby" ? (
@@ -1235,14 +1187,9 @@ export default function App() {
                 <div>
                   <strong>
                     {state.players.length < 2
-                      ? "One more seat to fill."
-                      : "Your party is ready."}
+                      ? "Waiting for your partner"
+                      : "Both players are here"}
                   </strong>
-                  <p>
-                    {state.players.length < 2
-                      ? "Share your private invitation with your partner."
-                      : `${state.players.map((p) => p.name).join(" and ")} — the island is yours to explore.`}
-                  </p>
                 </div>
                 {state.players.length < 2 ? (
                   <button
@@ -1251,7 +1198,7 @@ export default function App() {
                     disabled={busy}
                   >
                     <Link size={16} />
-                    Invite companion
+                    Invite partner
                   </button>
                 ) : (
                   <button
@@ -1302,12 +1249,11 @@ export default function App() {
                         : state.ending?.choice === "leave"
                           ? "You chose to leave without reconciliation."
                           : "Every choice brought you here."}{" "}
-                    {state.ending?.rescued ? "The party was rescued. " : ""}
-                    Your discoveries, choice and journal are saved.
+                    {state.ending?.rescued ? "The party was rescued." : ""}
                   </p>
                 </div>
                 <button className="subtle" onClick={leave}>
-                  Start another adventure · keep this journal
+                  Back to entrance
                 </button>
               </div>
             ) : (
@@ -1345,10 +1291,17 @@ export default function App() {
                   <p className="voice-status">
                     {voiceEnabled
                       ? listening
-                        ? "Tap again when you finish."
-                        : "Tap the microphone to speak. Tap again to finish."
-                      : "Enable voice to hear and speak with your storyteller."}
+                        ? "Tap to finish"
+                        : "Tap to talk"
+                      : ""}
                   </p>
+                  <HelpTip
+                    label="How does voice work?"
+                    text={[
+                      "Enable voice to hear the storyteller. Tap the microphone to speak and tap again to finish; you can interrupt the narration.",
+                      "Prefer typing? Use the box below.",
+                    ]}
+                  />
                   <button
                     className="icon-button"
                     aria-label={
@@ -1413,8 +1366,8 @@ export default function App() {
                     id="storyteller-action"
                     placeholder={
                       state.pendingCheck || state.rollDecision
-                        ? "Resolve the dice check to continue…"
-                        : "Describe your action or ask about your discovery…"
+                        ? "Resolve the dice check first"
+                        : "Your action or question…"
                     }
                     value={text}
                     onChange={(e) => setText(e.target.value)}
@@ -1508,11 +1461,9 @@ export default function App() {
             {tab === "evidence" && state.phase === "lobby" ? (
               <div className="notebook-intro">
                 <ScrollText size={28} strokeWidth={1.3} />
-                <h3>Two records. One discovery.</h3>
                 <p>
-                  When the adventure begins, each of you receives a different
-                  record here. Describe yours in English and open both locks
-                  together.
+                  Each of you gets a different private record here when the
+                  adventure begins.
                 </p>
               </div>
             ) : tab === "evidence" && credentials ? (
@@ -1537,10 +1488,6 @@ export default function App() {
                 <div className="notebook-intro">
                   <ScrollText size={28} strokeWidth={1.3} />
                   <h3>No clues yet.</h3>
-                  <p>
-                    Explore the shore. Clues you discover together are recorded
-                    here.
-                  </p>
                 </div>
               )
             ) : (
@@ -1593,8 +1540,7 @@ export default function App() {
                 ) && (
                   <div className="notebook-intro">
                     <Feather size={28} strokeWidth={1.3} />
-                    <h3>An unwritten chapter.</h3>
-                    <p>Your conversation and discoveries will appear here.</p>
+                    <h3>Nothing here yet.</h3>
                   </div>
                 )}
                 {caption && (
@@ -1703,8 +1649,7 @@ export default function App() {
                 </div>
                 {character.hp === 0 && (
                   <p className="incapacitated">
-                    You can still discuss and solve evidence. If everyone needs
-                    help, rest together.
+                    At 0 HP you can still talk and solve evidence.
                   </p>
                 )}
               </div>
@@ -1730,7 +1675,6 @@ export default function App() {
                       <Heart size={15} />
                       Rest together · recover up to 3 HP
                     </button>
-                    <p>Take a safe pause. Your evidence stays with you.</p>
                   </div>
                 )}
               <dl className="stats-grid">
@@ -1781,13 +1725,9 @@ export default function App() {
         </button>
       </nav>
       {inviteModal && (
-        <Modal
-          title="Adventure is better together."
-          close={() => setInviteModal(false)}
-        >
+        <Modal title="Invite your partner" close={() => setInviteModal(false)}>
           <p>
-            Send this private invitation to your companion. It gives them the
-            other character at your table.
+            Private link to the other seat. Share it only with your partner.
           </p>
           <div className="invite-link">
             <input
@@ -1796,35 +1736,30 @@ export default function App() {
               readOnly
               onFocus={(e) => e.target.select()}
             />
-            <button className="primary" onClick={() => void copyInvite()}>
+            <button
+              className="primary"
+              aria-label={copied ? "Invitation copied" : "Copy invitation"}
+              onClick={() => void copyInvite()}
+            >
               {copied ? <Check size={17} /> : <Copy size={17} />}
             </button>
-          </div>
-          <div className="modal-note">
-            <Users size={17} />
-            {state.players.length === 2
-              ? "Both seats are filled. Your companion can return using their saved session."
-              : "The second seat is waiting."}
           </div>
         </Modal>
       )}
       {settings && (
         <Modal
-          title="Your table, your pace."
+          title="Table settings"
           close={() => {
             setSettings(false);
             setRecoveryLink(null);
           }}
         >
           <div className="setting-row">
-            <div>
-              <strong>Illustrate the adventure</strong>
-              <p>Paint important scenes as the story unfolds.</p>
-            </div>
+            <strong id="illustrations-label">Scene illustrations</strong>
             <button
               role="switch"
               aria-checked={live.imageEnabled}
-              aria-label="Scene illustrations"
+              aria-labelledby="illustrations-label"
               className={`toggle ${live.imageEnabled ? "on" : ""}`}
               onClick={() =>
                 void perform(() =>
@@ -1838,25 +1773,11 @@ export default function App() {
             </button>
           </div>
           <div className="setting-row">
-            <div>
-              <strong>Your storyteller</strong>
-              <p>English · AI-generated voice · real D6 rolls</p>
-            </div>
-            <Compass className="gold" size={22} />
-          </div>
-          <p className="modal-note">
-            The adventure is saved on the server. This device remembers your
-            seat. Keep your private invitation between you and your companion.
-          </p>
-          <div className="setting-row">
-            <div>
-              <strong>Reading mode</strong>
-              <p>Larger type and clear lines for field evidence.</p>
-            </div>
+            <strong id="reading-label">Reading mode</strong>
             <button
               role="switch"
               aria-checked={readingMode}
-              aria-label="Reading mode"
+              aria-labelledby="reading-label"
               className={`toggle ${readingMode ? "on" : ""}`}
               onClick={() => setReadingMode(!readingMode)}
             >
@@ -1864,18 +1785,23 @@ export default function App() {
             </button>
           </div>
           <section className="recovery-settings">
-            <h3>Return to this adventure</h3>
-            <p>
-              Your name, character and progress stay at this table. A return
-              link moves a seat to another device.
-            </p>
+            <div className="recovery-head">
+              <h3>Return links</h3>
+              <HelpTip
+                label="What is a return link?"
+                text={[
+                  "It moves a seat to another device, keeping name, character and progress.",
+                  "Each link works once, for 15 minutes. Share it privately with that player.",
+                ]}
+              />
+            </div>
             {companion && (
               <button
                 className="subtle"
                 disabled={busy}
                 onClick={() => void makeRecovery(companion.characterId)}
               >
-                Help partner return
+                For {companion.name}
               </button>
             )}
             {player && (
@@ -1884,32 +1810,31 @@ export default function App() {
                 disabled={busy}
                 onClick={() => void makeRecovery(player.characterId)}
               >
-                Move my seat to another device
+                For me, on another device
               </button>
             )}
             {recoveryLink && (
               <div className="return-link">
                 <p>
-                  Return link ready for {recoveryLink.name}. Expires at{" "}
+                  For {recoveryLink.name} · single use · expires{" "}
                   {new Date(recoveryLink.expiresAt).toLocaleTimeString("en", {
                     hour: "2-digit",
                     minute: "2-digit",
-                  })}{" "}
-                  (15 minutes). It can be used once. Share privately with that
-                  player.
+                  })}
                 </p>
                 <button className="primary" onClick={() => void copyRecovery()}>
                   <Copy size={16} />
-                  {recoveryCopied
-                    ? "Return link copied"
-                    : "Copy private return link"}
+                  {recoveryCopied ? "Copied" : "Copy private link"}
                 </button>
               </div>
             )}
           </section>
+          <p className="modal-note">
+            This device remembers your seat; progress is saved on the server.
+          </p>
           <button className="subtle" onClick={leave}>
             <LogOut size={16} />
-            Back to entrance · keep saved adventure
+            Back to entrance
           </button>
         </Modal>
       )}

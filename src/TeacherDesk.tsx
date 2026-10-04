@@ -8,6 +8,7 @@ import {
   X,
 } from "lucide-react";
 import { HostAccess } from "./HostAccess";
+import { HelpTip } from "./HelpTip";
 import type {
   LessonDetails,
   LessonStatus,
@@ -236,7 +237,7 @@ export default function TeacherDesk() {
   async function copy(path: string, name: string) {
     try {
       await navigator.clipboard.writeText(location.origin + path);
-      setNotice(`${name}’s private link copied. It works again next week.`);
+      setNotice(`${name}’s link copied.`);
     } catch {
       setNotice(
         "Clipboard unavailable. Select the private link below and copy it.",
@@ -313,7 +314,7 @@ export default function TeacherDesk() {
   ) {
     return (
       <>
-        <label htmlFor={`${prefix}-date`}>Next lesson date</label>
+        <label htmlFor={`${prefix}-date`}>Next lesson</label>
         <input
           id={`${prefix}-date`}
           className="desk-date"
@@ -321,16 +322,23 @@ export default function TeacherDesk() {
           value={value.nextLesson}
           onChange={(e) => change({ nextLesson: e.target.value })}
         />
-        <label htmlFor={`${prefix}-notes`}>Private teaching notes</label>
+        <div className="desk-label-help">
+          <label htmlFor={`${prefix}-notes`}>Private notes</label>
+          <HelpTip
+            label="Who can read these notes?"
+            text={[
+              "Only this desk. Students and the storyteller never see them.",
+            ]}
+          />
+        </div>
         <textarea
           id={`${prefix}-notes`}
           rows={5}
           maxLength={6000}
           value={value.notes}
           onChange={(e) => change({ notes: e.target.value })}
-          placeholder="Where we stopped, language to revisit, plans for next time…"
+          placeholder="Where we stopped, language to revisit…"
         />
-        <small>Only the teacher desk can read these notes.</small>
       </>
     );
   }
@@ -425,7 +433,7 @@ export default function TeacherDesk() {
                 </select>
               </label>
               <label>
-                Adventures
+                Show
                 <select
                   value={scope}
                   onChange={(e) => setScope(e.target.value)}
@@ -436,16 +444,17 @@ export default function TeacherDesk() {
                 </select>
               </label>
               <label className="desk-search">
-                Find a pair
+                <span className="visually-hidden">Find a pair</span>
                 <input
                   type="search"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Student or adventure name"
+                  placeholder="Search pairs"
                 />
               </label>
               <button
-                className="subtle"
+                className="subtle desk-refresh"
+                aria-label="Refresh progress"
                 disabled={busy}
                 onClick={() =>
                   void perform(async () => {
@@ -455,7 +464,6 @@ export default function TeacherDesk() {
                 }
               >
                 <RefreshCw size={16} aria-hidden="true" />
-                Refresh
               </button>
               <button
                 className="primary desk-new"
@@ -484,7 +492,7 @@ export default function TeacherDesk() {
                 {visible.length ? (
                   groups.map((group) => (
                     <div className="desk-group" key={group.name || "none"}>
-                      <h2>{group.name || "No class assigned"}</h2>
+                      <h2>{group.name || "No class"}</h2>
                       <ul>
                         {group.rows.map((t) => {
                           const date = upcoming(t.nextLesson);
@@ -537,9 +545,8 @@ export default function TeacherDesk() {
                       <p>No pair matches these filters.</p>
                     ) : (
                       <p>
-                        Create a pair with <strong>New pair</strong>: name the
-                        two students, then send each one their private link.
-                        Their progress stays here between lessons.
+                        No pairs yet. Use <strong>New pair</strong> to add two
+                        students.
                       </p>
                     )}
                   </div>
@@ -560,10 +567,7 @@ export default function TeacherDesk() {
                 {creating ? (
                   <form onSubmit={(e) => void create(e)}>
                     <div className="desk-detail-head">
-                      <div>
-                        <span className="desk-kicker">New pair</span>
-                        <h2>Reserve both seats</h2>
-                      </div>
+                      <h2>New pair</h2>
                       <button
                         type="button"
                         className="subtle desk-close"
@@ -573,9 +577,6 @@ export default function TeacherDesk() {
                         Cancel
                       </button>
                     </div>
-                    <p className="desk-lead">
-                      You manage the lesson without taking a player’s character.
-                    </p>
                     <fieldset disabled={busy}>
                       <div className="desk-field-pair desk-seats">
                         <div>
@@ -656,7 +657,7 @@ export default function TeacherDesk() {
                         </small>
                       </details>
                       <button className="primary" type="submit">
-                        {busy ? "Saving…" : "Create teaching table"}
+                        {busy ? "Saving…" : "Create pair"}
                       </button>
                     </fieldset>
                   </form>
@@ -665,7 +666,7 @@ export default function TeacherDesk() {
                     <div className="desk-detail-head">
                       <div>
                         <span className="desk-kicker">
-                          {table.cohort || "No class assigned"} ·{" "}
+                          {table.cohort || "No class"} ·{" "}
                           <span
                             className={`desk-status ${table.status} ${table.phase}`}
                           >
@@ -681,7 +682,7 @@ export default function TeacherDesk() {
                             disabled={busy}
                             onClick={() => void save("paused")}
                           >
-                            End this lesson · pause
+                            Pause lesson
                           </button>
                         ) : (
                           <button
@@ -689,7 +690,7 @@ export default function TeacherDesk() {
                             disabled={busy}
                             onClick={() => void save("active")}
                           >
-                            Reopen for next lesson
+                            Reopen
                           </button>
                         )}
                         {table.status !== "archived" && (
@@ -698,9 +699,16 @@ export default function TeacherDesk() {
                             disabled={busy}
                             onClick={() => void save("archived")}
                           >
-                            Archive adventure
+                            Archive
                           </button>
                         )}
+                        <HelpTip
+                          label="What do pause and archive do?"
+                          text={[
+                            "Pause closes voice and stops new turns; students can still review. Reopen lets them continue.",
+                            "Archive moves the pair out of Current. Progress and links are always kept.",
+                          ]}
+                        />
                       </div>
                     </div>
                     <div className="desk-continuity">
@@ -708,9 +716,9 @@ export default function TeacherDesk() {
                         className="desk-recap"
                         aria-labelledby="desk-recap-title"
                       >
-                        <h3 id="desk-recap-title">Where the story stopped</h3>
+                        <h3 id="desk-recap-title">Story so far</h3>
                         <p className="desk-chapter">
-                          {table.chapterTitle} · last activity{" "}
+                          {table.chapterTitle} · last played{" "}
                           {when(table.lastPlayedAt)}
                         </p>
                         <blockquote tabIndex={0} aria-label="Story recap">
@@ -718,17 +726,17 @@ export default function TeacherDesk() {
                         </blockquote>
                         <dl className="desk-metrics">
                           <div>
-                            <dt>Puzzles solved</dt>
+                            <dt>Solved</dt>
                             <dd>
                               {table.solved}/{table.total}
                             </dd>
                           </div>
                           <div>
-                            <dt>Hints requested</dt>
+                            <dt>Hints</dt>
                             <dd>{table.hints}</dd>
                           </div>
                           <div>
-                            <dt>Answer attempts</dt>
+                            <dt>Attempts</dt>
                             <dd>{table.attempts}</dd>
                           </div>
                         </dl>
@@ -741,7 +749,7 @@ export default function TeacherDesk() {
                           void save();
                         }}
                       >
-                        <h3 id="desk-plan-title">Plan the next lesson</h3>
+                        <h3 id="desk-plan-title">Lesson plan</h3>
                         <fieldset disabled={busy}>
                           {planFields(
                             draft,
@@ -754,7 +762,7 @@ export default function TeacherDesk() {
                             "edit",
                           )}
                           <button className="primary" type="submit">
-                            Save teaching notes
+                            Save
                           </button>
                         </fieldset>
                       </form>
@@ -763,11 +771,16 @@ export default function TeacherDesk() {
                       className="desk-links"
                       aria-labelledby="desk-links-title"
                     >
-                      <h3 id="desk-links-title">Private student links</h3>
-                      <p>
-                        Each link keeps working next week and on another device.
-                        Opening one replaces that student’s previous connection.
-                      </p>
+                      <div className="desk-label-help">
+                        <h3 id="desk-links-title">Private student links</h3>
+                        <HelpTip
+                          label="How do student links work?"
+                          text={[
+                            "Each link works every lesson, on any device. Opening it signs out that student’s previous device.",
+                            "Send each link only to its student.",
+                          ]}
+                        />
+                      </div>
                       {table.students.map((student) => (
                         <div className="desk-student" key={student.character}>
                           <img
@@ -778,9 +791,7 @@ export default function TeacherDesk() {
                           />
                           <div className="desk-student-name">
                             <strong>{student.name}</strong>
-                            <small>
-                              Playing {character(student.character)}
-                            </small>
+                            <small>as {character(student.character)}</small>
                           </div>
                           <button
                             className="subtle"
@@ -801,7 +812,7 @@ export default function TeacherDesk() {
                             onFocus={(e) => e.target.select()}
                           />
                           <details>
-                            <summary>Replace a lost or shared link</summary>
+                            <summary>Replace link</summary>
                             <p>
                               This disables the previous link and saved seat for{" "}
                               {student.name}. Send the replacement to that
@@ -833,10 +844,7 @@ export default function TeacherDesk() {
                   </>
                 ) : (
                   <div className="desk-empty desk-placeholder">
-                    <p>
-                      Select a pair to see where their story stopped, plan the
-                      next lesson and copy their return links.
-                    </p>
+                    <p>Select a pair.</p>
                   </div>
                 )}
               </section>
@@ -844,10 +852,6 @@ export default function TeacherDesk() {
           </>
         )}
       </main>
-      <footer className="desk-footer">
-        Progress is saved as students play. Pausing and archiving preserve the
-        adventure.
-      </footer>
     </div>
   );
 }

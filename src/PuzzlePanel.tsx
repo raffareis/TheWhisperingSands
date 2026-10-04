@@ -72,16 +72,14 @@ export function PuzzlePanel({
       aria-labelledby="puzzle-title"
     >
       <div className="puzzle-heading">
-        <span className="section-eyebrow">
-          Chapter {Math.min(room.chapter + 1, 5)} of 5 · Evidence lock
-        </span>
+        <span className="section-eyebrow">Evidence lock</span>
         <button
           className="reading-toggle"
           aria-pressed={readingMode}
           onClick={() => setReadingMode(!readingMode)}
         >
           <BookOpenText size={15} />
-          {readingMode ? "Reading mode on" : "Reading mode"}
+          Reading mode
         </button>
       </div>
       <h2 id="puzzle-title">{p.title}</h2>
@@ -103,8 +101,7 @@ export function PuzzlePanel({
       <article className="evidence-card">
         <span className="evidence-owner">
           <EyeOff size={14} />
-          Private record · only {locks.find((l) => l.own)?.name ?? "you"} can
-          see this
+          Private · only you can see this
         </span>
         <h3>{p.evidenceTitle}</h3>
         <div className="evidence-lines">
@@ -114,12 +111,12 @@ export function PuzzlePanel({
         </div>
         <small>
           {locks.find((l) => l.id === partner)?.name ?? "Your partner"} has a
-          different record. Describe this one in English.
+          different record. Describe yours in English.
         </small>
       </article>
       {!!p.glossary?.length && (
         <details className="puzzle-glossary">
-          <summary>Words in this record</summary>
+          <summary>Key words</summary>
           <dl>
             {p.glossary.map(({ term, meaning }) => (
               <div key={term}>
@@ -134,7 +131,7 @@ export function PuzzlePanel({
         <article className="discovery">
           <h3>Discovery recorded</h3>
           <p>{p.reward}</p>
-          <p>Tell the storyteller what you discovered to continue.</p>
+          <p>Tell the storyteller to continue.</p>
         </article>
       ) : (
         <form
@@ -155,14 +152,13 @@ export function PuzzlePanel({
               autoComplete="off"
               onChange={(e) => setAnswer(e.target.value)}
               disabled={accepted || busy}
-              placeholder="Compare your evidence first…"
             />
             <button
               type="submit"
               className="primary"
               disabled={accepted || busy || !answer.trim()}
             >
-              {accepted ? "Your lock accepted" : "Test arrangement"}
+              {accepted ? "Accepted" : "Try answer"}
             </button>
           </div>
         </form>
@@ -192,16 +188,15 @@ export function PuzzlePanel({
             >
               <Lightbulb size={15} />
               {p.hints.length >= 3
-                ? "All three hints are open"
+                ? "No more hints"
                 : `Reveal hint ${p.hints.length + 1} of 3`}
             </button>
-            <small>No time penalty. No HP lost for trying.</small>
+            <small>Hints and wrong answers cost no HP.</small>
           </div>
         </div>
       )}
       <details className="worker-notebook">
-        <summary>Expedition notebook &amp; English helper</summary>
-        <p>Ask a helper while the storyteller continues.</p>
+        <summary>Notebook helpers</summary>
         <div className="worker-actions">
           <button
             className="subtle"

@@ -13,14 +13,14 @@ permite acrescentar outras atividades. O anfitrião usa seu código privado para
 criar mesas. O segundo jogador entra pelo convite, sem precisar desse código.
 
 1. Abra a atividade, libere o acesso de anfitrião, informe seu nome e escolha Sam ou Liz.
-2. Use **Invite companion** e envie o link privado à outra pessoa. Ela ocupa o
+2. No saguão, use **Invite partner** e envie o link privado à outra pessoa. Ela ocupa o
    outro personagem, no próprio navegador. Emily é a companheira conduzida pelo mestre.
 3. Quando os dois entrarem, use **Begin adventure**.
 4. Use **Enable voice** nos dois dispositivos. Toque no microfone para falar e
    toque novamente para terminar. Os dois ouvem o mesmo mestre e a fala do companheiro.
    É possível interromper a narração. **Ask the storyteller** envia texto ao mestre.
    **Discuss together** envia mensagens só à dupla, sem invocar a IA.
-   **Enable companion audio** habilita escuta; **Talk to companion** usa um
+   **Join partner audio** habilita escuta; **Talk to partner** usa um
    canal separado, sem transcrição ou persistência de áudio.
 5. Quando o mestre pedir um teste, somente o personagem indicado pode usar **Roll D6**.
    Uma falha permite **Accept setback** ou **Push your luck**, uma nova tentativa por 1 HP,
@@ -30,6 +30,9 @@ criar mesas. O segundo jogador entra pelo convite, sem precisar desse código.
    ele possui outra parte. Cada assento envia sua própria resposta. As duas
    precisam ser aceitas para abrir a passagem. Há três níveis de ajuda, e erros
    nos enigmas não tiram vida. Dados e Emily não substituem a resolução.
+
+A ajuda secundária abre no botão `?`, por toque, clique ou teclado; Escape fecha
+a ajuda antes de fechar um diálogo. Texto de interface e ajuda contextual: #9.
 
 A página central acompanha a cena; a ficha mostra atributos, vida e objetos
 ilustrados que podem ser examinados.
@@ -135,21 +138,21 @@ Cada dupla mantém a mesma mesa entre aulas: personagens, inventário, aceites
 parciais, pistas, hints e diário ficam no SQLite. O link individual não tem
 expiração semanal e funciona em um navegador novo. Ao abri-lo, o servidor
 substitui as credenciais antigas daquele aluno, preservando seu personagem.
-**Replace a lost or shared link** revoga o link anterior e o assento salvo;
+**Replace link** revoga o link anterior e o assento salvo;
 entregue somente o substituto. Recuperações de 15 minutos continuam disponíveis
 no jogo e não invalidam o link permanente da aula.
 
-Ao terminar, registre **Private teaching notes**, escolha **Next lesson** e use
-**End this lesson · pause**. A pausa fecha os microfones e cancela trabalho de
+Ao terminar, registre **Private notes**, escolha **Next lesson** e use
+**Pause lesson**. A pausa fecha os microfones e cancela trabalho de
 background pendente; não envia novos turnos, respostas ou hints. Um turno de
 texto já em andamento precisa terminar antes da pausa. Cancelamento não garante
 estorno de geração já enviada ao provedor. Os alunos podem rever seu material.
-Na aula seguinte, escolha a dupla e **Reopen for next lesson**. Continuem usando
+Na aula seguinte, escolha a dupla e **Reopen**. Continuem usando
 os mesmos links; os jogadores habilitam novamente a voz quando quiserem.
 
 O painel mostra turma, próxima data, puzzles resolvidos, hints, tentativas e a
 última narração. Notas da professora ficam fora do estado dos jogadores e dos
-prompts da IA. Filtre por turma/nome; **Archive adventure** conserva a partida
+prompts da IA. Filtre por turma/nome; **Archive** conserva a partida
 para consulta e permite reabri-la. **Lock desk** encerra o acesso de professora
 naquele navegador. **Bring an existing adventure** importa uma mesa com dois
 jogadores pelo código `room=` de sua URL, preservando nomes e progresso.
@@ -182,8 +185,8 @@ chave privada, `APP_URL` e `TEACHING_REPORT` para checkpoints separados.
   `DATA_DIR` permite mover esses dados; eles ficam fora do Git.
 - Cada dispositivo guarda seu token de assento localmente. Recarregar retoma a sala.
   Abrir o mesmo assento em outra aba substitui a conexão anterior. Sair do assento
-  preserva a partida na lista **Saved adventures**. Em **Table settings**,
-  **Help partner return** ou **Move my seat to another device** produz um link
+  preserva a partida na lista **Continue**. Em **Table settings**,
+  **For [nome do parceiro]** ou **For me, on another device** produz um link
   privado de 15 minutos, uso único. Ele preserva personagem e progresso, revoga
   o token antigo e fecha a conexão substituída. O parceiro pode recuperar um
   assento cujo armazenamento foi apagado; não existe login por e-mail.
