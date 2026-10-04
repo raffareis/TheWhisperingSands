@@ -1,0 +1,100 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="1000" viewBox="0 0 1400 1000" role="img" aria-labelledby="title desc">
+  <title id="title">The Whispering Sands — Keeper's Field Chart</title>
+  <desc id="desc">Private Dungeon Master chart: a drawn wooded island, rocky coast, eastern tidal crossing, northern lighthouse and western harbour. Eight numbered places follow the campaign. No evidence-card text or puzzle solutions appear on this map.</desc>
+  <defs>
+    <pattern id="paper" width="31" height="29" patternUnits="userSpaceOnUse">
+      <path d="M3 7h2m14 12h1m9-16h2M7 26h1" stroke="#786a53" stroke-width=".5" opacity=".12"/>
+    </pattern>
+    <pattern id="sea-grain" width="81" height="62" patternUnits="userSpaceOnUse">
+      <path d="M7 11q11-3 20 0m27 27q8-2 16 0M22 57q8-2 16 0" fill="none" stroke="#6d8988" stroke-width=".8" opacity=".22"/>
+    </pattern>
+    <pattern id="forest" width="39" height="37" patternUnits="userSpaceOnUse" patternTransform="rotate(-9)">
+      <path d="M9 27V12m-7 8 7-8 7 8m-5-3 5 9m13-1V8m-7 9 7-9 7 9m-13 8 6-8 6 8" fill="none" stroke="#526258" stroke-width=".9" opacity=".48"/>
+    </pattern>
+    <pattern id="sand" width="19" height="23" patternUnits="userSpaceOnUse">
+      <circle cx="3" cy="7" r=".8" fill="#a99775" opacity=".4"/><circle cx="13" cy="17" r=".65" fill="#a99775" opacity=".3"/>
+    </pattern>
+    <path id="island" d="M539 130C506 136 499 153 466 173C429 176 390 187 370 224C355 251 340 292 353 316C365 330 393 331 398 350C401 374 367 385 351 409C315 443 292 483 299 526C312 560 302 589 326 627C347 660 363 694 395 716C431 740 477 753 519 780C559 798 585 827 624 840C666 849 705 847 743 855C802 865 859 849 891 813C919 787 926 748 902 719C878 705 847 710 819 694C792 681 766 659 780 637C795 615 826 612 849 629C874 641 897 656 906 638C914 620 895 585 874 556C852 524 835 486 839 453C845 420 854 395 846 366C861 335 865 309 848 280C823 252 784 239 761 209C739 182 714 167 682 161C639 153 598 119 539 130Z"/>
+    <clipPath id="land-clip"><use href="#island"/></clipPath>
+    <g id="pine"><path d="M0 17V-15m-10 12 10-12 10 12m-15 0-7 10h24l-7-10m-16 10-7 10h36L8 7" fill="#809084" stroke="#42534a" stroke-width="1.1"/></g>
+    <g id="palm"><path d="M0 20q6-17 1-35m0 0q-17-11-25 3m25-3q19-14 29-1M1-15q-1-17-12-21m12 21q12-17 25-17M1-15q-15 1-21 15m21-15q17-1 24 10" fill="none" stroke="#556956" stroke-width="1.8" stroke-linecap="round"/></g>
+    <g id="rock"><path d="m-9 2 5-8 10 1 6 9-9 4-10-2Z" fill="#b6b2a2" stroke="#777c72" stroke-width="1"/><path d="m-4-6 3 9 13 1" fill="none" stroke="#90978a" stroke-width=".75"/></g>
+    <g id="number"><circle r="12" fill="#f3ecdd" stroke="#823d30" stroke-width="1.4"/></g>
+    <style>
+      .serif{font-family:Georgia,'Times New Roman',serif;fill:#2f3935}
+      .small{font-family:Arial,Helvetica,sans-serif;fill:#57625c;font-size:12px;letter-spacing:.8px}
+      .label{font-family:Georgia,'Times New Roman',serif;fill:#53645f;font-size:15px;font-style:italic;letter-spacing:1px}
+      .n{font-family:Georgia,'Times New Roman',serif;fill:#823d30;font-size:14px;text-anchor:middle;dominant-baseline:central}
+      .legend{font-family:Georgia,'Times New Roman',serif;fill:#2f3935;font-size:18px}
+      .note{font-family:Arial,Helvetica,sans-serif;fill:#58605a;font-size:13px}
+    </style>
+  </defs>
+  <rect width="1400" height="1000" fill="#f0ebde"/>
+  <rect x="24" y="24" width="1352" height="952" rx="2" fill="none" stroke="#a7a38f" stroke-width="1"/>
+  <rect x="31" y="31" width="1338" height="938" fill="none" stroke="#c7beaa" stroke-width=".6"/>
+  <path d="M68 131H996V889H68Z" fill="#dfe8e1" opacity=".75"/>
+  <path d="M68 131H996V889H68Z" fill="url(#sea-grain)"/>
+  <text x="69" y="68" class="small" font-size="11">MARITIME FIELD ARCHIVE / CHART 01</text>
+  <text x="68" y="106" class="serif" font-size="37" letter-spacing="3">THE WHISPERING SANDS</text>
+  <text x="1340" y="65" class="small" text-anchor="end">PRIVATE · DUNGEON MASTER</text>
+  <text x="1340" y="102" class="serif" text-anchor="end" font-size="21" font-style="italic">Keeper's field chart</text>
+  <!-- Pale water strokes follow the headlands rather than a rectangular grid. -->
+  <path d="M347 190C308 226 302 305 318 326M302 396C239 467 247 570 283 645M381 753C498 830 555 898 721 900M891 233C950 315 925 443 948 522M938 739C977 810 865 915 761 930" fill="none" stroke="#9ab5ad" stroke-width="1.2" opacity=".68"/>
+  <path d="M326 177C279 226 272 300 292 330M277 392C209 477 229 584 264 653M351 771C473 857 552 925 697 932M912 224C973 310 951 435 970 501" fill="none" stroke="#b3c7be" stroke-width="1"/>
+  <use href="#island" fill="#d7d2b5" stroke="#4f655f" stroke-width="2.2"/>
+  <g clip-path="url(#land-clip)">
+    <path d="M348 259C397 178 492 180 544 191C611 204 688 184 749 241C793 278 838 309 817 350C774 410 829 478 780 538C739 589 704 615 636 618C570 633 505 694 438 663C379 636 341 565 349 501C357 445 410 407 398 366C387 329 342 310 348 259Z" fill="#9eae93" opacity=".75"/>
+    <path d="M425 212C494 204 536 239 557 285C581 328 561 398 614 427C678 467 690 525 665 560C646 597 557 609 524 637C484 672 418 628 394 582C370 536 389 475 436 438C475 404 454 368 416 331C379 294 378 242 425 212Z" fill="#7f9682" opacity=".46"/>
+    <path d="M351 251C408 189 488 195 550 218C635 240 700 214 765 280C807 322 774 372 793 423C820 489 768 550 703 586C647 619 567 641 514 669C463 702 379 625 357 563C332 492 403 423 402 365C403 315 332 306 351 251Z" fill="url(#forest)"/>
+    <!-- Contour lines and ridge hatching. -->
+    <path d="M470 168C429 199 427 219 458 248C483 276 500 323 506 370C514 416 504 462 537 489C572 520 605 557 590 603M501 158C468 186 469 214 491 239C521 273 528 316 533 362C539 412 533 451 560 478C591 505 625 548 615 585M538 152C507 176 512 214 532 240C554 276 560 320 560 362C560 410 568 442 586 461C619 496 653 532 642 571M572 167C562 206 563 232 580 264C594 291 597 337 591 372C586 411 602 441 625 462C659 492 680 523 674 552" fill="none" stroke="#9b9a7e" stroke-width="1.1" opacity=".8"/>
+    <path d="M522 300l-15 11m23 9-15 11m24 10-16 11m25 9-16 11m25 11-16 9m27 10-18 8m30 12-18 7M619 449l17-6m-6 19 18-6m-7 20 18-6m-8 21 19-5m-10 19 18-4" fill="none" stroke="#8a927b" stroke-width="1.4"/>
+    <!-- Warm beach wash. -->
+    <path d="M640 774C709 795 758 772 810 727C842 706 887 724 905 763C917 795 875 835 828 848C769 866 680 844 641 820Z" fill="#e8d9b6"/>
+    <path d="M640 774C709 795 758 772 810 727C842 706 887 724 905 763C917 795 875 835 828 848C769 866 680 844 641 820Z" fill="url(#sand)"/>
+    <path d="M755 628C788 612 822 612 852 641C882 667 914 661 930 677L917 702C880 704 850 696 820 682C790 669 771 661 755 647Z" fill="#c9dad2" stroke="#8aa79e" stroke-width=".8"/>
+    <path d="M786 630q22-5 40 6m7 19q22 10 43 6m-83-4q17 5 28 12" fill="none" stroke="#91aca2" stroke-width="1"/>
+  </g>
+  <!-- Cliff teeth on the western and northeastern coasts. -->
+  <path d="M351 411l-2 16-11 2m3 7-1 15-12 1m2 8 1 13-11 4m-4 9 5 14-12 5m0 11 8 10-10 7m6 12 9 8-8 10m14 18 8 4-4 12m445-298 1 16 13 2m1 7-4 13 12 4m-5 9-5 12 13 5" fill="none" stroke="#677667" stroke-width="1.9"/>
+  <text x="203" y="498" class="label" transform="rotate(-79 203 498)">western cliffs</text>
+  <text x="786" y="363" class="label" transform="rotate(67 786 363)">high eastern ridge</text>
+  <text x="440" y="569" class="label" transform="rotate(-20 440 569)">fern &amp; pine woodland</text>
+  <text x="101" y="785" class="label" font-size="18">Western Sound</text>
+  <text x="805" y="192" class="label" font-size="18">Open Sea</text>
+  <text x="853" y="585" class="label" font-size="13" transform="rotate(24 853 585)">tidal shelf</text>
+  <!-- Campaign spine: geographical route only, not the local puzzle solution. -->
+  <path d="M881 791Q861 760 824 738Q822 693 805 653Q771 619 718 559Q659 521 632 491Q610 472 585 448Q550 397 555 356Q553 311 551 261L574 210" fill="none" stroke="#9c5141" stroke-width="2" stroke-dasharray="5 6" stroke-linecap="round"/>
+  <path d="M574 210Q525 197 498 244Q471 280 452 293Q425 310 420 332L381 354" fill="none" stroke="#9c5141" stroke-width="2" stroke-dasharray="5 6" stroke-linecap="round"/>
+  <path d="M523 236q-12 2-14 15m-6 1q-12 1-13 14m-7 1q-12 1-13 12" fill="none" stroke="#746e5d" stroke-width="1"/>
+  <!-- Landmark sketches sit behind the numbered pins. -->
+  <g transform="translate(573 199)"><path d="m-10 4 2-39h16l2 39Z" fill="#ede5d2" stroke="#4f5b52" stroke-width="1.4"/><path d="M-10-35h20v-10H-10Z" fill="#c6d7cd" stroke="#4f5b52" stroke-width="1.2"/><path d="m-14-45 14-9 14 9Z" fill="#8a4b3c" stroke="#4f5b52" stroke-width="1.2"/><path d="M-3-35v-10m6 0v10M-3 4v-12h6V4" fill="none" stroke="#596c62" stroke-width="1"/><path d="M-17 5h34" stroke="#647569"/></g>
+  <g transform="translate(581 437)"><path d="m-21 5 4-22 33-5 7 22Z" fill="#c4c2ac" stroke="#526251" stroke-width="1.3"/><path d="m-17-17 18-10 15 5M-21 5h44M-7 5V-8q8-10 15-1V4" fill="none" stroke="#63735e" stroke-width="1.1"/><path d="m-14-11 8-2m10-3 9-1" stroke="#89917c"/></g>
+  <g transform="translate(718 548)"><path d="M-20 12V-6Q0-35 20-6v18h-9V-4Q0-18-11-4v16Z" fill="#b9baa2" stroke="#61715f" stroke-width="1.6"/><path d="m-20-6 9 2m6-19 2 9m10-9-2 9m15 8-9 2" stroke="#7c8874" stroke-width="1"/></g>
+  <g transform="translate(813 718)"><use href="#palm" transform="translate(-19 0) scale(.85)"/><use href="#palm" transform="translate(28 -4) scale(.65)"/><path d="m-11 9 10-18 25 18Z" fill="#f1e8ce" stroke="#6b745e" stroke-width="1.3"/><path d="M-1-9 5 9m-16 0H24" stroke="#967558" fill="none"/></g>
+  <g transform="translate(894 791) rotate(-23)"><path d="M-16-12q14 5 30 0l-4 18q-10 9-23 0Z" fill="#8f7150" stroke="#605844" stroke-width="1.2"/><path d="M-9-6H10M-9 0H7M-3-9v19M-1-12v-27l14 15H-1" fill="none" stroke="#5e5b4b" stroke-width="1.1"/><path d="m-13 9-7 5m21-3 13 7" stroke="#8b7457"/></g>
+  <g transform="translate(365 354) rotate(-18)"><path d="M0-8h-50v16H0" fill="#b2956e" stroke="#586655" stroke-width="1.3"/><path d="M-6-8V8m-8-16V8m-8-16V8m-8-16V8m-8-16V8" stroke="#817859" stroke-width="1"/></g>
+  <g opacity=".9"><use href="#rock" x="788" y="640"/><use href="#rock" x="806" y="646"/><use href="#rock" x="823" y="652"/><use href="#rock" x="780" y="651"/><use href="#rock" x="798" y="658"/><use href="#rock" x="816" y="664"/><use href="#rock" x="772" y="663"/><use href="#rock" x="790" y="670"/><use href="#rock" x="808" y="676"/></g>
+  <g><use href="#number" x="881" y="791"/><text x="881" y="791" class="n">1</text><use href="#number" x="824" y="738"/><text x="824" y="738" class="n">2</text><use href="#number" x="805" y="653"/><text x="805" y="653" class="n">3</text><use href="#number" x="718" y="559"/><text x="718" y="559" class="n">4</text><use href="#number" x="585" y="448"/><text x="585" y="448" class="n">5</text><use href="#number" x="551" y="261"/><text x="551" y="261" class="n">6</text><use href="#number" x="574" y="210"/><text x="574" y="210" class="n">7</text><use href="#number" x="381" y="354"/><text x="381" y="354" class="n">8</text></g>
+  <!-- Small maritime compass, not a decorative fantasy emblem. -->
+  <g transform="translate(152 214)"><circle r="31" fill="none" stroke="#899a8e" stroke-width=".8"/><path d="M0-44V43M-43 0h86" stroke="#67766b" stroke-width=".8"/><path d="M0-37-7 0H7Z" fill="#52665c"/><path d="M0 37-7 0H7Z" fill="#d7d5bf" stroke="#52665c" stroke-width=".8"/><text y="-53" class="serif" font-size="16" text-anchor="middle">N</text><text x="51" y="5" class="small">E</text><text x="-61" y="5" class="small">W</text><text y="58" class="small" text-anchor="middle">S</text></g>
+  <!-- Unsolved local inset: no labels, coordinates or highlighted stones. -->
+  <g transform="translate(108 558)"><rect width="180" height="132" fill="#eef0e4" stroke="#a3b3a4" stroke-width=".8"/><text x="13" y="24" class="small" font-size="11">CROSSING DETAIL</text><path d="M13 50q23-4 48 0m14 41q24-4 55 0m-108 23q31-4 65 0" fill="none" stroke="#acc2b4" stroke-width="1"/><g transform="translate(56 57)"><use href="#rock"/><use href="#rock" x="32"/><use href="#rock" x="64"/><use href="#rock" y="24"/><use href="#rock" x="32" y="24"/><use href="#rock" x="64" y="24"/><use href="#rock" y="48"/><use href="#rock" x="32" y="48"/><use href="#rock" x="64" y="48"/></g></g>
+  <text x="108" y="713" class="small" font-size="10">Local evidence grid; not island coordinates.</text>
+  <!-- Field-notebook legend is separated from the coast by a simple rule. -->
+  <path d="M1019 131V889" stroke="#b3ac96" stroke-width="1"/>
+  <text x="1050" y="164" class="small" font-size="11">PLACES / CAMPAIGN ORDER</text>
+  <g transform="translate(1064 202)"><use href="#number"/><text class="n">1</text><text x="25" y="5" class="legend">Wreck Beach</text><text x="25" y="27" class="note">Broken boat · locked rescue chest</text><text x="25" y="47" class="small" font-size="10">CHAPTER 0</text></g>
+  <g transform="translate(1064 284)"><use href="#number"/><text class="n">2</text><text x="25" y="5" class="legend">Palm Camp</text><text x="25" y="27" class="note">Shelter · safe tide-waiting terrace</text><text x="25" y="47" class="small" font-size="10">CHAPTER 1</text></g>
+  <g transform="translate(1064 366)"><use href="#number"/><text class="n">3</text><text x="25" y="5" class="legend">Nine-Stone Crossing</text><text x="25" y="27" class="note">Local route · exposed at low water</text><text x="25" y="47" class="small" font-size="10">CHAPTER 1 → 2</text></g>
+  <g transform="translate(1064 448)"><use href="#number"/><text class="n">4</text><text x="25" y="5" class="legend">Old Stone Arch</text><text x="25" y="27" class="note">Tidal shelf · entrance to fern gully</text><text x="25" y="47" class="small" font-size="10">CHAPTER 2</text></g>
+  <g transform="translate(1064 530)"><use href="#number"/><text class="n">5</text><text x="25" y="5" class="legend">Keeper's Archive</text><text x="25" y="27" class="note">Stone vault · records below the ridge</text><text x="25" y="47" class="small" font-size="10">CHAPTER 2</text></g>
+  <g transform="translate(1064 612)"><use href="#number"/><text class="n">6</text><text x="25" y="5" class="legend">Voice Machine</text><text x="25" y="27" class="note">Lower chamber of the lighthouse</text><text x="25" y="47" class="small" font-size="10">CHAPTER 3</text></g>
+  <g transform="translate(1064 694)"><use href="#number"/><text class="n">7</text><text x="25" y="5" class="legend">Beacon Gallery</text><text x="25" y="27" class="note">Lantern · final signal at dawn</text><text x="25" y="47" class="small" font-size="10">CHAPTER 4</text></g>
+  <g transform="translate(1064 776)"><use href="#number"/><text class="n">8</text><text x="25" y="5" class="legend">Ferry Quay</text><text x="25" y="27" class="note">Western harbour · rescue boarding</text><text x="25" y="47" class="small" font-size="10">CHAPTER 5 / RESCUE</text></g>
+  <path d="M1050 858h31" stroke="#9c5141" stroke-width="2" stroke-dasharray="5 6"/><text x="1092" y="862" class="note">Gated campaign passage</text>
+  <path d="M69 914H1339" stroke="#b3ac96" stroke-width="1"/>
+  <text x="69" y="940" class="small" font-size="11">SCHEMATIC FIELD SURVEY · NORTH UP · TRAVEL TIMES LIVE IN THE SERVER GRAPH</text>
+  <text x="1339" y="940" class="small" font-size="11" text-anchor="end">TIDES SET THE MOOD. EVIDENCE OPENS THE WAY.</text>
+  <rect width="1400" height="1000" fill="url(#paper)" pointer-events="none"/>
+</svg>

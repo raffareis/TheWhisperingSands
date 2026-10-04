@@ -69,6 +69,10 @@ export interface RoomState {
   lastRoll: Roll | null;
   rollDecision: string | null;
   preferences: { illustrations: boolean };
+  puzzles?: PuzzleProgress[];
+  puzzleView?: PuzzleView | null;
+  workers?: WorkerJob[];
+  learningNotes?: { id: string; text: string; sceneId: string }[];
   phase: "lobby" | "playing" | "complete";
 }
 export interface Credentials {
@@ -93,4 +97,40 @@ export interface Configuration {
   aiAvailable: boolean;
   realtimeModel: string;
   imageModel: string;
+}
+
+export interface PuzzleProgress {
+  id: string;
+  accepted: ("sam" | "liz")[];
+  attempts: number;
+  hintCount: number;
+  solved: boolean;
+}
+export interface PuzzleView {
+  id: string;
+  title: string;
+  premise: string;
+  languageFocus: string;
+  evidenceTitle: string;
+  evidence: string[];
+  task: string;
+  format: string;
+  hints: string[];
+  accepted: ("sam" | "liz")[];
+  solved: boolean;
+  attempts: number;
+  reward: string | null;
+}
+export interface WorkerJob {
+  id: string;
+  task: "illustration" | "recap" | "language_coach";
+  contextId: string;
+  status: "queued" | "running" | "ready" | "error" | "superseded";
+  startedAt: string;
+  durationMs?: number;
+  model?: string;
+  inputTokens?: number;
+  outputTokens?: number;
+  cachedTokens?: number;
+  error?: string;
 }

@@ -1,0 +1,193 @@
+{
+  "schema_version": 1,
+  "title": "The Whispering Sands — Keeper's Field Chart",
+  "visibility": "dm_only",
+  "map_file": "assets/dm/island-map.svg",
+  "canvas": { "width": 1400, "height": 1000 },
+  "orientation": {
+    "north": "up",
+    "overview": "A wooded island with a high northern lighthouse, a sheltered southeastern wreck beach and a western ferry harbour. The eastern shelf is cut by a tidal channel; the western coast is mostly steep rock.",
+    "scale": "Schematic: coordinates are drawing positions, not puzzle-grid coordinates or measured distances.",
+    "travel_policy": "Travel minutes are approximate story pacing. Do not impose a classroom countdown or subtract time for an incorrect answer.",
+    "gate_policy": "Use solved puzzle state from the server. Geography never grants a bypass, alternate token, forced lock, NPC solution or dice solution. A gate permits a transition; it does not itself advance the chapter."
+  },
+  "chapter_anchor": [
+    "wreck_beach",
+    "palm_camp",
+    "keeper_archive",
+    "voice_machine",
+    "beacon_gallery",
+    "ferry_quay"
+  ],
+  "nodes": [
+    {
+      "id": "wreck_beach",
+      "label": "Wreck Beach",
+      "map_number": 1,
+      "position": { "x": 881, "y": 791 },
+      "first_chapter": 0,
+      "terrain": "Sheltered southeastern sand, driftwood and the broken family boat.",
+      "dm_note": "The locked rescue chest is here. The camp is visible above the strand, but the evidence lock must be solved before the survival chapter begins."
+    },
+    {
+      "id": "palm_camp",
+      "label": "Palm Camp",
+      "map_number": 2,
+      "position": { "x": 824, "y": 738 },
+      "first_chapter": 1,
+      "terrain": "A sandy terrace under palms, above ordinary high water.",
+      "dm_note": "Safe place for shelter, discussion, definitions and waiting out a tide. The recovered chart belongs to a small local crossing, not this island-wide map."
+    },
+    {
+      "id": "nine_stone_crossing",
+      "label": "Nine-Stone Crossing",
+      "map_number": 3,
+      "position": { "x": 805, "y": 653 },
+      "first_chapter": 1,
+      "terrain": "Nine exposed stones in a shallow eastern channel; the crossing is submerged at high tide.",
+      "dm_note": "A local 3 × 3 evidence chart resolves the marked passage. Neither the island map nor a physical roll identifies the correct stones. Keep the route secret until both seats have submitted successfully."
+    },
+    {
+      "id": "old_stone_arch",
+      "label": "Old Stone Arch",
+      "map_number": 4,
+      "position": { "x": 718, "y": 559 },
+      "first_chapter": 2,
+      "terrain": "Weathered masonry at the northern end of the tidal shelf, opening into a fern gully.",
+      "dm_note": "The keeper's records are discovered beneath the arch after the crossing lock is solved. The gully leads a short distance inland to the archive."
+    },
+    {
+      "id": "keeper_archive",
+      "label": "Keeper's Archive",
+      "map_number": 5,
+      "position": { "x": 585, "y": 448 },
+      "first_chapter": 2,
+      "terrain": "A low stone vault under the central ridge, entered from the fern gully.",
+      "dm_note": "The chronology challenge belongs here. Access to the recovered seal and the restoration chapter depends on accepted evidence, not finding another door. The ridge path climbs north afterwards."
+    },
+    {
+      "id": "voice_machine",
+      "label": "Voice Machine",
+      "map_number": 6,
+      "position": { "x": 551, "y": 261 },
+      "first_chapter": 3,
+      "terrain": "A brass apparatus in the lower chamber of the hilltop lighthouse.",
+      "dm_note": "The restoration mechanism is on the ground floor. Numbered handles and instructions are private player evidence; do not derive their arrangement from this map."
+    },
+    {
+      "id": "beacon_gallery",
+      "label": "Beacon Gallery",
+      "map_number": 7,
+      "position": { "x": 574, "y": 210 },
+      "first_chapter": 4,
+      "terrain": "The glazed lantern and open gallery above the voice-machine chamber.",
+      "dm_note": "Reached by the internal stair after restoration. The final promise focuses the lens. Dawn is a narrative cue and may wait for the classroom discussion."
+    },
+    {
+      "id": "ferry_quay",
+      "label": "Ferry Quay",
+      "map_number": 8,
+      "position": { "x": 381, "y": 354 },
+      "first_chapter": 5,
+      "terrain": "A sheltered western harbour and a wooden pier beneath the headland.",
+      "dm_note": "The restored beacon brings an answering ferry. Describe the descent and boarding only after the final lock has accepted both halves; an unlit quay does not summon a rescue boat."
+    }
+  ],
+  "edges": [
+    {
+      "from": "wreck_beach",
+      "to": "palm_camp",
+      "travel_minutes": 5,
+      "tide": "Any tide; camp is above high water.",
+      "gate": { "puzzle_id": "salvage-lock", "requires": "solved" },
+      "description": "Carry the recovered supplies up the short sandy rise. The terrace may be described from the beach before passage is earned."
+    },
+    {
+      "from": "palm_camp",
+      "to": "nine_stone_crossing",
+      "travel_minutes": 8,
+      "tide": "Approach is safe at any tide; the exposed stones require falling or low water.",
+      "gate": null,
+      "description": "Follow the eastern strand north to inspect the nine-stone channel. Return to camp if the water hides the stones."
+    },
+    {
+      "from": "nine_stone_crossing",
+      "to": "old_stone_arch",
+      "travel_minutes": 10,
+      "tide": "Low or falling water. At high water wait safely; never erase a solved route.",
+      "gate": { "puzzle_id": "tide-route", "requires": "solved" },
+      "description": "Cross the evidence-marked local stones, then continue along the northwestern shelf to the arch. No swimming, climbing or alternate shore path bypasses the lock."
+    },
+    {
+      "from": "old_stone_arch",
+      "to": "keeper_archive",
+      "travel_minutes": 7,
+      "tide": "Dry ground once beyond the crossing.",
+      "gate": null,
+      "description": "Walk inland through the fern gully to the archive beneath the ridge. The discovered records are examined here."
+    },
+    {
+      "from": "keeper_archive",
+      "to": "voice_machine",
+      "travel_minutes": 15,
+      "tide": "Dry ridge path, above all ordinary tides.",
+      "gate": { "puzzle_id": "keeper-timeline", "requires": "solved" },
+      "description": "Climb north through the pine saddle carrying the recovered voice-seal, then enter the lighthouse's lower chamber."
+    },
+    {
+      "from": "voice_machine",
+      "to": "beacon_gallery",
+      "travel_minutes": 2,
+      "tide": "Indoors; tide has no effect.",
+      "gate": { "puzzle_id": "voice-machine", "requires": "solved" },
+      "description": "Use the internal spiral stair after the machine is restored. The upper lantern belongs to the final-promise chapter."
+    },
+    {
+      "from": "beacon_gallery",
+      "to": "ferry_quay",
+      "travel_minutes": 12,
+      "tide": "Dry western descent; the sheltered pier supports boarding at either tide.",
+      "gate": { "puzzle_id": "final-promise", "requires": "solved" },
+      "description": "After the beacon is repaired and the ferry answers, descend the western switchback to the quay. Boarding completes the rescue."
+    }
+  ],
+  "tide_rules": {
+    "initial_state": "Falling after the storm; a low-water window can follow the pair's preparation.",
+    "cycle": "falling → low → rising → high → falling",
+    "affected_nodes": ["nine_stone_crossing"],
+    "safe_wait_nodes": ["palm_camp", "old_stone_arch", "keeper_archive"],
+    "dm_policy": "Use the tide for atmosphere and safe planning. It is not a real-time deadline or punishment for English mistakes. Once both submissions are accepted, provide a safe crossing window. Never trap the pair between tides or undo accepted evidence."
+  },
+  "sightlines": [
+    {
+      "from": "wreck_beach",
+      "to": "palm_camp",
+      "visibility": "Clear view of the nearby palm terrace and shelter sites."
+    },
+    {
+      "from": "palm_camp",
+      "to": "beacon_gallery",
+      "visibility": "The lighthouse lantern is a tiny silhouette above the northern ridge; the internal machine and its labels are invisible."
+    },
+    {
+      "from": "nine_stone_crossing",
+      "to": "old_stone_arch",
+      "visibility": "The arch appears beyond the channel when mist thins. Sight does not establish the correct local route."
+    },
+    {
+      "from": "keeper_archive",
+      "to": "voice_machine",
+      "visibility": "The lighthouse roof appears only after leaving the vault and climbing beyond the forest saddle."
+    },
+    {
+      "from": "beacon_gallery",
+      "to": "ferry_quay",
+      "visibility": "An unobstructed western view over the sheltered harbour, the pier and the ferry approach."
+    },
+    {
+      "from": "ferry_quay",
+      "to": "beacon_gallery",
+      "visibility": "The lantern crowns the headland and its restored signal is plainly visible."
+    }
+  ]
+}

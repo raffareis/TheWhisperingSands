@@ -11,7 +11,6 @@ import {
   Wind,
   BookOpen,
   Heart,
-  Backpack,
   Shield,
   Brain,
   Trees,
@@ -26,7 +25,6 @@ import {
   Dices,
   Sparkles,
   MapPin,
-  ChevronDown,
   ChevronRight,
   ScrollText,
   Users,
@@ -49,6 +47,8 @@ import type {
   Stat,
 } from "../shared/types";
 import { TableAudio } from "./audio";
+import { PuzzlePanel } from "./PuzzlePanel";
+import { Inventory } from "./Inventory";
 const emptyLive: LiveState = {
   dmStatus: "offline",
   speaker: null,
@@ -83,7 +83,9 @@ export default function App() {
   const [characterChoice, setCharacterChoice] = useState<"sam" | "liz">("sam");
   const [invite, setInvite] = useState("");
   const [inviteModal, setInviteModal] = useState(false);
-  const [tab, setTab] = useState<"story" | "clues" | "journal">("story");
+  const [tab, setTab] = useState<"story" | "clues" | "journal" | "evidence">(
+    "evidence",
+  );
   const [selectedCharacter, setSelectedCharacter] =
     useState<CharacterId>("sam");
   const [voiceEnabled, setVoiceEnabled] = useState(false);
@@ -268,6 +270,7 @@ export default function App() {
     };
   }, [credentials?.token, joining]);
   useEffect(() => {
+    if (tab === "evidence") return;
     transcript.current?.scrollTo({
       top: transcript.current.scrollHeight,
       behavior: "smooth",
@@ -388,11 +391,9 @@ export default function App() {
   if (!state || joining)
     return (
       <div className="welcome">
-        <div className="welcome-art" />
-        <div className="welcome-shade" />
         <header className="welcome-header">
           <Brand />
-          <span className="small-caps">A story best told together</span>
+          <span className="small-caps">An island mystery · for two</span>
         </header>
         <main className="welcome-layout">
           <section className="welcome-copy">
@@ -400,28 +401,25 @@ export default function App() {
               <span />A cooperative island adventure
             </div>
             <h1>
-              Every shore
+              Washed ashore.
               <br />
-              has a <em>secret.</em>
+              <em>Not alone.</em>
             </h1>
             <p>
               A storm. An uncharted island.
               <br />
-              Two adventurers, and a story that listens.
+              Search together. Read the evidence. Find a way home.
             </p>
-            <div className="welcome-features">
-              <span>
-                <Mic size={17} />A living storyteller
-              </span>
-              <span>
-                <Sparkles size={17} />
-                Scenes that unfold
-              </span>
-              <span>
-                <Users size={17} />
-                Made for two
-              </span>
-            </div>
+            <figure className="arrival-plate">
+              <img
+                src="/art/coastal-field-study-sunburst.webp"
+                alt="A storm-torn boat on the shore of a misty island, with carved markings at the forest edge."
+              />
+              <figcaption>
+                <span>PLATE 01</span> The shore after the storm{" "}
+                <span>THE WHISPERING SANDS</span>
+              </figcaption>
+            </figure>
             <div className="chapter-hint">
               <span>01 / THE SHIPWRECK</span>
               <div />
@@ -431,21 +429,19 @@ export default function App() {
           <section className="entry-card">
             <Compass size={31} className="gold" />
             <span className="eyebrow">
-              {joining
-                ? "YOUR PLACE AT THE TABLE"
-                : "YOUR ADVENTURE STARTS HERE"}
+              {joining ? "YOUR PLACE AT THE TABLE" : "EXPEDITION REGISTER"}
             </span>
-            <h2>{joining ? "A companion is waiting." : "Take your place."}</h2>
+            <h2>{joining ? "A companion is waiting." : "Who are you?"}</h2>
             <p>
               {joining
                 ? "Join the same island, the same choices, the same storyteller."
-                : "Invite someone you trust. The island will test that."}
+                : "Choose a character, then invite your companion to take the other seat."}
             </p>
             <form onSubmit={enter}>
               <label htmlFor="player-name">Your name</label>
               <input
                 id="player-name"
-                placeholder="Rafael or Meg"
+                placeholder="Your name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
@@ -464,10 +460,11 @@ export default function App() {
                       type="button"
                       key={id}
                       className={characterChoice === id ? "chosen" : ""}
+                      aria-pressed={characterChoice === id}
                       onClick={() => setCharacterChoice(id)}
                     >
                       <span className={`character-seal ${id}`}>
-                        {id === "sam" ? <Shield /> : <Feather />}
+                        <img src={`/art/${id}-sunburst.webp`} alt="" />
                       </span>
                       <strong>{id === "sam" ? "Samuel" : "Elizabeth"}</strong>
                       <small>
@@ -496,7 +493,7 @@ export default function App() {
             </form>
             <div className="entry-foot">
               <Heart size={14} />
-              <span>No game experience needed. Just your imagination.</span>
+              <span>Two players · shared clues · one persistent story</span>
             </div>
             {credentials && !joining && (
               <button className="link-button" onClick={leave}>
@@ -543,7 +540,7 @@ export default function App() {
       <main className="table-grid">
         <aside className="character-panel">
           <div className="panel-title">
-            <span>YOUR PARTY</span>
+            <span>01 / EXPEDITION</span>
             <Users size={15} />
           </div>
           <div
@@ -569,7 +566,7 @@ export default function App() {
               <div className={`character-hero ${character.id}`}>
                 <img
                   className="character-portrait"
-                  src={`/art/${character.id}.png`}
+                  src={`/art/${character.id}-sunburst.webp`}
                   alt={`${character.name}, ${character.role.toLowerCase()}`}
                 />
                 <div className="portrait-shade" />
@@ -629,39 +626,10 @@ export default function App() {
                 })}
               </div>
               <p className="character-bio">{character.bio}</p>
-              <div className="inventory-title">
-                <span>
-                  <Backpack size={15} />
-                  Inventory
-                </span>
-                <small>
-                  {character.inventory.reduce((a, i) => a + i.quantity, 0)}{" "}
-                  {character.inventory.reduce((a, i) => a + i.quantity, 0) === 1
-                    ? "item"
-                    : "items"}
-                </small>
-              </div>
-              <div className="inventory-list">
-                {character.inventory.length ? (
-                  character.inventory.map((item) => (
-                    <details key={item.id}>
-                      <summary>
-                        <span className="item-glyph">
-                          <Backpack size={16} />
-                        </span>
-                        <span>{item.name}</span>
-                        <small>×{item.quantity}</small>
-                        <ChevronDown size={13} />
-                      </summary>
-                      <p>{item.description}</p>
-                    </details>
-                  ))
-                ) : (
-                  <p className="empty-copy">
-                    Nothing carried yet. Discoveries will appear here.
-                  </p>
-                )}
-              </div>
+              <Inventory
+                items={character.inventory}
+                owner={character.shortName}
+              />
               <div className="party-presence">
                 {state.players.map((p) => (
                   <div key={p.id}>
@@ -708,7 +676,7 @@ export default function App() {
             <div className="scene-tags">
               <span>
                 <Compass size={13} />
-                THE WHISPERING SANDS
+                CURRENT OBSERVATION
               </span>
               {state.scene.status === "generating" && (
                 <span className="painting">
@@ -717,16 +685,19 @@ export default function App() {
                 </span>
               )}
             </div>
-            <div className="scene-copy">
-              <span className="small-caps">{state.scene.location}</span>
-              <h1>{state.scene.title}</h1>
-              <p>{state.scene.description}</p>
-            </div>
             <span className="expand-label">
               Explore scene
               <ArrowRight size={13} />
             </span>
           </button>
+          <div className="scene-copy">
+            <span className="plate-number">
+              FIELD RECORD / {String(state.chapter).padStart(2, "0")}
+            </span>
+            <span className="small-caps">{state.scene.location}</span>
+            <h1>{state.scene.title}</h1>
+            <p>{state.scene.description}</p>
+          </div>
           {state.scene.status === "error" && (
             <div className="scene-error">
               <Sparkles size={14} />
@@ -760,9 +731,9 @@ export default function App() {
             <div className="filmstrip-note">
               <Sparkles size={14} />
               <span>
-                Your choices
+                Collected views
                 <br />
-                paint the world.
+                of the island.
               </span>
             </div>
           </div>
@@ -910,7 +881,7 @@ export default function App() {
                 {caption ||
                   lastDM?.text ||
                   (state.phase === "lobby"
-                    ? "The island has been waiting. Bring your companion to the table, then let the story begin."
+                    ? "The storm has passed. Invite your companion, then begin at the wreck."
                     : "The storyteller is gathering the next thread of your adventure…")}
               </p>
             </div>
@@ -927,7 +898,7 @@ export default function App() {
                   </strong>
                   <p>
                     {state.players.length < 2
-                      ? "Share your invitation with Meg or Rafael."
+                      ? "Share your private invitation with your partner."
                       : `${state.players.map((p) => p.name).join(" and ")} — the island is yours to explore.`}
                   </p>
                 </div>
@@ -1099,7 +1070,7 @@ export default function App() {
         </section>
         <aside className="journal-panel">
           <div className="panel-title">
-            <span>THE ADVENTURE</span>
+            <span>03 / FIELD NOTES</span>
             <BookOpen size={16} />
           </div>
           <div
@@ -1107,7 +1078,7 @@ export default function App() {
             role="tablist"
             aria-label="Adventure notebook"
           >
-            {(["story", "clues", "journal"] as const).map((t) => (
+            {(["evidence", "story", "clues", "journal"] as const).map((t) => (
               <button
                 role="tab"
                 aria-selected={tab === t}
@@ -1115,20 +1086,38 @@ export default function App() {
                 key={t}
                 onClick={() => setTab(t)}
               >
-                {t === "story"
-                  ? "At the table"
-                  : t === "clues"
-                    ? `Clues${state.clues.length ? " · " + state.clues.length : ""}`
-                    : "Journal"}
+                {t === "evidence"
+                  ? "Evidence"
+                  : t === "story"
+                    ? "At the table"
+                    : t === "clues"
+                      ? `Clues${state.clues.length ? " · " + state.clues.length : ""}`
+                      : "Journal"}
               </button>
             ))}
           </div>
           <div className="journal-scroll" ref={transcript}>
-            {tab === "clues" ? (
+            {tab === "evidence" && state.phase === "lobby" ? (
+              <div className="notebook-intro">
+                <ScrollText size={30} />
+                <h3>Two records. One discovery.</h3>
+                <p>
+                  Once your adventure begins, each player receives a different
+                  piece of evidence here. Describe yours in English and work
+                  together to open both locks.
+                </p>
+              </div>
+            ) : tab === "evidence" && credentials ? (
+              <PuzzlePanel
+                key={state.puzzleView?.id}
+                room={state}
+                credentials={credentials}
+              />
+            ) : tab === "clues" ? (
               <>
                 <div className="notebook-intro">
                   <ScrollText size={30} />
-                  <h3>Pieces of the mystery.</h3>
+                  <h3>The evidence so far.</h3>
                   <p>Only what you discover belongs here.</p>
                 </div>
                 {state.clues.length ? (
@@ -1141,7 +1130,8 @@ export default function App() {
                   ))
                 ) : (
                   <p className="empty-copy">
-                    The island is keeping its secrets. For now.
+                    Explore the shore. Clues you discover together will be
+                    recorded here.
                   </p>
                 )}
               </>
@@ -1226,7 +1216,7 @@ export default function App() {
         </aside>
       </main>
       <footer className="table-footer">
-        <span>ONE ISLAND. TWO ADVENTURERS. YOUR STORY.</span>
+        <span>THE WHISPERING SANDS / EXPEDITION RECORD</span>
         <span>
           D6 + attribute ≥ target · {companion?.name ?? "Your companion"}{" "}
           {live.presence.some((p) => p.playerId === companion?.id && p.online)

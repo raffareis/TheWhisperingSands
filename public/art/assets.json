@@ -21,6 +21,34 @@
       "file": "emily.png",
       "use_case": "illustration-story",
       "prompt": "Use case: illustration-story\nAsset type: character portrait for the cooperative island RPG The Whispering Sands.\nStyle: cinematic painterly adventure concept art, grounded realism, rich muted teal shadows and warm copper highlights, subtle brush texture. Vertical chest-up portrait with the character centered, face clearly visible in the upper half, tropical island foliage and sea mist softly out of focus behind them. Wear weathered practical clothes after a boating storm; expressive and human, not a superhero. No text, borders, interface, logos or watermark.\nSubject: Emily, a fictional sixteen-year-old girl on an island adventure with her parents. Practical teal outdoor jacket, loose brown ponytail, curious brave expression, natural age-appropriate appearance, fully clothed. She is an ordinary teenager in a family survival story."
+    },
+    {
+      "file": "coastal-field-study.png",
+      "id": "coastal-field-study",
+      "use_case": "illustration-story",
+      "prompt": "Use case: illustration-story\nAsset type: canonical scene style reference and opening shore illustration for The Whispering Sands, an intimate cooperative archaeological island mystery.\nInput image 1: geographical reference. Keep the storm-wrecked small boat debris on a tropical shore, wet sand, grey ocean, rocky forested cliffs, one weathered tree with indistinct carvings. Do not copy glossy epic cinematography. No people or spoilers.\nPrimary request: Reinterpret this shore as a beautiful plate from an old expedition field journal. View at human eye level from the beach after the storm. A few broken planks and tangled rope close by, water receding quietly between rocks, distant cliffs lost in a wide bank of pale sea mist, foliage as irregular brush masses, soft overcast morning. Intimate and credible rather than grand fantasy.\nStyle/medium: distinctly hand-painted opaque gouache with sparse pencil and scratched ink details on warm ivory paper; unpainted pale mist and paper at outer edges; dry brush, visible pigment, simplified masses, reserved fine detail for boat wood and shoreline; reminiscent of an observant naturalist's field sketch. Not a photo, not 3D, not slick digital concept art.\nPalette: restrained sea-grey, dusty eucalyptus and olive, raw umber, pale ochre, grey-white sky. Warm paper light. Matte pigment, low saturation.\nComposition: wide landscape, calm asymmetrical composition, foreground evidence left, empty pale sky upper third, not symmetrical, no giant sunbeams, no central glowing object. No text, lettering, numbers, logos, borders, interface, talisman, supernatural effects or people.",
+      "reference_ids": ["shipwreck"]
+    },
+    {
+      "file": "pocket-knife.png",
+      "id": "pocket-knife",
+      "use_case": "illustration-story",
+      "prompt": "Use case: illustration-story\nAsset type: original inventory object plate for the cooperative island RPG The Whispering Sands; reusable canonical object reference.\nPrimary request: one weathered folding pocketknife, opened halfway, with a dark walnut handle, two small brass rivets, short practical dull-steel blade, salt stains and tiny scratches. Ordinary worn survival tool, not a weapon display.\nInput image 1 is a palette/material reference only: keep the restrained storm-coast earth colours, do not reproduce its landscape.\nStyle/medium: a beautiful hand-observed archaeological field notebook illustration in precise graphite and sparse watercolor, visible dry brush, natural imperfect edges, realistic proportions, careful tactile details, not 3D render or glossy product photo.\nComposition: single complete object centered diagonally, generous clear margin, orthographic overhead view, no ground plane, no cast shadow outside object. Warm neutral illumination. Palette iron grey, walnut brown, aged brass, faint olive.\nConstraints: genuine transparent background, no paper rectangle, no text, numbers, labels, frame, decorative symbols or other objects.",
+      "reference_ids": ["shipwreck"]
+    },
+    {
+      "file": "field-notebook.png",
+      "id": "field-notebook",
+      "use_case": "illustration-story",
+      "prompt": "Use case: illustration-story\nAsset type: inventory object plate and canonical object reference for The Whispering Sands.\nPrimary request: One closed salt-stained archaeologist's pocket field notebook, frayed olive-brown cloth hardcover, faded red linen spine, a graphite pencil tucked diagonally beneath a simple elastic strap, cream pages with wavy damp edges. No writing visible.\nInput image 1: canonical materials and tactile illustration reference, not target. Match its realistic wear and subdued maritime expedition palette; do not reproduce knife.\nStyle: carefully observed natural-history field illustration, graphite outlines and muted dry watercolor details. Restrained illustration, warm neutral daylight, museum specimen clarity.\nComposition: isolated complete single notebook with its pencil, three-quarter overhead view centered with generous margins, no surrounding props or ground plane. Genuine transparent background, preserve alpha.\nAvoid: text, labels, symbols, logo, borders, glow, ornamental fantasy design, background, dramatic shadow.",
+      "reference_ids": ["pocket-knife"]
+    },
+    {
+      "file": "ancient-talisman.png",
+      "id": "ancient-talisman",
+      "use_case": "illustration-story",
+      "prompt": "Use case: illustration-story\nAsset type: an isolated ancient island talisman, inventory object plate and canonical visual reference for the original co-operative mystery The Whispering Sands.\nInput image 1: materials and specimen framing reference only, not edit target. Match detailed aged tactile materials and muted expedition palette.\nSubject: one palm-sized rounded dark bronze pendant, irregular ancient handworked shape, pierced suspension hole at top, a single subtle spiral with three short wave-like incisions carved into the front. Corroded copper-green in incisions, rubbed amber-metal raised edges. Strange ancient metal, believable archaeological find, no gems. Slightly asymmetrical. A small broken loop of coarse plant cord.\nStyle: precise hand-observed archaeological field illustration, natural graphite definition, sparse watercolor, restrained true material texture. Centered front three-quarter view, object complete, ample margin, no ground plane, neutral natural light. No magical glow.\nConstraints: genuinely transparent background with alpha, no paper rectangle, no labels or written text, no letters, numbers, modern logos, frame, decorative props or other objects. Symbols decorative only, never a written solution.",
+      "reference_ids": ["pocket-knife"]
     }
   ]
 }

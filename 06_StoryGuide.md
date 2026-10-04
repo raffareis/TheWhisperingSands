@@ -1,43 +1,53 @@
-# **"The Whispering Sands" DM Guide**
+# Guia da campanha revisada — as vozes roubadas
 
-## **Introduction:**
+Campaign language: English. This guide supersedes the old chapter scripts and
+standalone riddles. The setting, Sam, Liz, Emily, shipwreck, survival and eventual
+rescue remain. The mystery now has one causal chain: the lighthouse keeper stole
+the islanders' voices, removing a voice-seal from the vault. The lighthouse went
+dark after the theft; the resulting unnatural storm wrecked the family's boat.
+Restoring the voices and the keeper's promise allows the rescue beacon to work.
 
-Set the scene. Describe the island, the wrecked boat, and the characters waking up on the beach. Give the players a chance to react to their situation and decide their first actions.
+## Condução da aula
 
-## **Chapter 1 - Survival:**
+Default reading demand is intermediate English; this is a design target, not a
+formal CEFR assessment. Let the pair ask for definitions or slower narration.
+Each player has a private evidence card. They must describe, paraphrase, ask for
+clarification and negotiate a solution in English across their devices. The DM
+receives only the public premise, progress and already-requested hint tiers.
+Do not read the partner's card for them or turn every sentence into a correction.
+Emily can notice scenery, offer reassurance and request clarification; she cannot
+solve the locks. Wrong puzzle attempts cost neither HP nor time. Physical risk
+still uses server D6 rules. Never roll to solve, skip or force an evidence lock.
 
-The players need to find food, water, and shelter. Offer them opportunities to use their skills.
+## Os cinco capítulos
 
-- **Action Opportunity:** Emily tries to catch fish. (Roll D6 + SUR)
-- **Action Opportunity:** Liz tries to decipher the symbols on the trees. (Roll D6 + INT)
-- **Action Opportunity:** Sam builds a fire and a shelter. (Roll D6 + STR)
+| Chapter | Story beat | Cooperative evidence challenge | English purpose |
+| --- | --- | --- | --- |
+| 0 — Shipwreck | Wake on the shore. Find the locked rescue chest among wreckage. | Quartermaster's Lock: equipment glossary versus coded shipping ledger, four relevant supplies ordered by weight. | Definitions, paraphrase, lighter/heavier, eliminate irrelevant evidence. |
+| 1 — Survival | Recover supplies, make shelter and trace a safe low-tide passage. | Path That Disappears: map versus route notebook; words and coordinates must describe the same four stones. | Prepositions, compass directions, describing position and checking misunderstanding. |
+| 2 — Exploration | Beneath the old arch, find the keeper's contradictory records. | Four Events, One Lie: log labels versus witness statements, reconstruct chronology. | Before/after, past perfect in context, explaining inference from evidence. |
+| 3 — Curse | Recover the voice-seal and discover the keeper's theft. Restore the machine. | Keeper's Instructions: numbered phrasal-verb handles versus literal restoration instructions. | Phrasal verbs, negation, sequencing and meaning. |
+| 4 — Final ritual | Return the voices and repair the beacon at dawn. | Promise at Dawn: use earned word-tokens and each other's clause frame to repair a first conditional. | Present-simple condition, future result and collaborative sentence construction. |
 
-## **Chapter 2 - Exploration:**
+The server alone validates puzzle answers and requires each seat's own submission.
+Both accepted locks award a persistent discovery; the first four also award a
+word-token, and the fifth uses those tokens to complete the promise. Do not
+invent alternate tokens or expose future discoveries in public clues or images.
+A chapter cannot advance until its puzzle is solved; advance only one chapter
+per actual transition. Final rescue follows the restored beacon; completing
+chapter 5 means rescue, not merely defeating a creature.
 
-The players decide to explore the island. Describe the island's features and hint at its mysteries.
+## Mistério e ritmo
 
-- **Action Opportunity:** Emily navigates the terrain. (Roll D6 + SUR)
-- **Action Opportunity:** Liz examines the ancient ruins. (Roll D6 + INT)
-- **Action Opportunity:** Sam moves a heavy obstacle. (Roll D6 + STR)
+Use the missing warning bell in shipping records as the first oddity. Later,
+the deliberate order of events disproves the keeper's storm excuse. Voices in
+shells and words missing from carved plaques are symptoms, not random riddles.
+The keeper is frightened of abandonment, not an excuse for graphic horror.
+Invite the pair to decide whether to confront, forgive or simply leave him.
+Let optional exploration and survival checks change resources and flavour while
+the evidence chain remains intact. Suspense comes from a rising tide and the
+moral discovery; there is no real-time classroom countdown or fail-dead-end.
 
-## **Chapter 3 - The Curse:**
-
-Emily finds an ancient talisman and awakens a curse. The island becomes more dangerous, and the players must find a way to break the curse.
-
-- **Action Opportunity:** Emily tries to understand the talisman. (Roll D6 + INT)
-- **Action Opportunity:** Liz deciphers a cryptic inscription. (Roll D6 + INT)
-- **Action Opportunity:** Sam fights off a monstrous beast. (Roll D6 + STR)
-
-## **Chapter 4 - The Final Battle:**
-
-The players confront the angry spirits, using their skills and the clues they've found to break the curse.
-
-- **Action Opportunity:** Emily solves the final puzzle. (Roll D6 + INT)
-- **Action Opportunity:** Liz recites the incantation. (Roll D6 + INT)
-- **Action Opportunity:** Sam defends the group. (Roll D6 + STR)
-
-## **Conclusion:**
-
-Describe the lifting of the curse, the calming of the island, and the arrival of a rescue ship. The players have survived the island and lifted the curse. Their actions have determined their fate.
-
-Remember, as a DM, your job is to guide the story, not control it. Be flexible and adapt to the players' decisions. The goal is to create a fun, engaging, and memorable adventure for everyone.
+The source of executable evidence and validators is `server/puzzles.ts`; it is
+server-only. Images contain atmosphere and artifacts, never exact puzzle text.
+All readable cards, coordinates and labels are rendered deterministically by UI.

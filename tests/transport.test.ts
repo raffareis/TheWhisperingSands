@@ -69,6 +69,16 @@ test(
       }
       const config = await api("/api/config");
       assert.equal(config.body.aiAvailable, false);
+      for (const path of [
+        "/assets/dm/island-map.svg",
+        "/server/campaign-map.json",
+        "/@fs/home/raffareis/repos/workshop/projetos/the-whispering-sands/assets/dm/island-map.svg",
+        "/server%2fcampaign-map.json",
+      ]) {
+        const hidden = await fetch(base + path);
+        assert.equal(hidden.status, 404, path);
+        assert.equal((await hidden.json()).error, "Not found.");
+      }
       const created = await api("/api/rooms", {
         name: "Rafael",
         characterId: "sam",

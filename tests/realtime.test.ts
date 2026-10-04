@@ -84,13 +84,34 @@ test(
     try {
       const one = await client(a);
       const two = await client(b);
+      await until(
+        () =>
+          one.events.some((e) => e.type === "state") &&
+          two.events.some((e) => e.type === "state"),
+      );
+      assert.equal(
+        one.events.find((e) => e.type === "state").state.puzzleView
+          .evidenceTitle,
+        "Water-damaged equipment glossary",
+      );
+      assert.equal(
+        two.events.find((e) => e.type === "state").state.puzzleView
+          .evidenceTitle,
+        "Quartermaster's shipping ledger",
+      );
+      assert.ok(!JSON.stringify(one.events).includes("Label 2 · 480 g"));
+      assert.ok(
+        !JSON.stringify(two.events).includes(
+          "FLINT — a stone that produces sparks",
+        ),
+      );
       await Promise.all([room.startVoice(a), room.startVoice(b)]);
       assert.equal(connections, 1);
       assert.equal(room.live.dmStatus, "ready");
       const config = incoming.find((e) => e.type === "session.update").session;
       assert.equal(config.audio.input.format.rate, 24000);
       assert.equal(config.audio.input.turn_detection, null);
-      assert.equal(config.tools.length, 3);
+      assert.equal(config.tools.length, 4);
       await room.action(a, "I try to move the heavy wreckage.");
       await until(() => incoming.some((e) => e.type === "response.create"));
       emit({ type: "response.created", response: { id: "r1" } });

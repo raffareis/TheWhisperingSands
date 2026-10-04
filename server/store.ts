@@ -27,7 +27,7 @@ export class RoomStore {
     mkdirSync(directory, { recursive: true });
     this.db = new DatabaseSync(join(directory, "adventure.sqlite"));
     this.db.exec(
-      "PRAGMA journal_mode=WAL; CREATE TABLE IF NOT EXISTS rooms(id TEXT PRIMARY KEY, state TEXT NOT NULL, invite_hash TEXT NOT NULL); CREATE TABLE IF NOT EXISTS seats(token_hash TEXT PRIMARY KEY,room_id TEXT NOT NULL,player_id TEXT NOT NULL);",
+      "PRAGMA journal_mode=WAL; CREATE TABLE IF NOT EXISTS rooms(id TEXT PRIMARY KEY, state TEXT NOT NULL, invite_hash TEXT NOT NULL); CREATE TABLE IF NOT EXISTS seats(token_hash TEXT PRIMARY KEY,room_id TEXT NOT NULL,player_id TEXT NOT NULL); CREATE TABLE IF NOT EXISTS worker_attempts(room_id TEXT NOT NULL,task TEXT NOT NULL,at INTEGER NOT NULL); CREATE INDEX IF NOT EXISTS worker_attempts_at ON worker_attempts(at);",
     );
   }
   load(id: string): RoomState {
@@ -115,6 +115,32 @@ export class RoomStore {
       .prepare("UPDATE rooms SET invite_hash=? WHERE id=?")
       .run(digest(invite), roomId);
     return invite;
+  }
+  reserveWorker(roomId: string, task: string) {
+    const since = Date.now() - 3600000;
+    const image = task === "illustration";
+    const category = image ? "illustration" : "notebook";
+    const count = (room: boolean) =>
+      (
+        this.db
+          .prepare(
+            `SELECT count(*) AS n FROM worker_attempts WHERE at>? AND task=?${room ? " AND room_id=?" : ""}`,
+          )
+          .get(...(room ? [since, category, roomId] : [since, category])) as {
+          n: number;
+        }
+      ).n;
+    if (count(true) >= (image ? 24 : 60) || count(false) >= (image ? 120 : 300))
+      throw new GameError(
+        "Background work has reached its hourly budget. Continue playing; no automatic retry.",
+        429,
+      );
+    this.db
+      .prepare("INSERT INTO worker_attempts VALUES(?,?,?)")
+      .run(roomId, category, Date.now());
+    this.db
+      .prepare("DELETE FROM worker_attempts WHERE at<?")
+      .run(since - 3600000);
   }
   close() {
     this.db.close();

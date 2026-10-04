@@ -1,6 +1,5 @@
 import WebSocket from "ws";
-import { mkdirSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+
 import { z } from "zod";
 import type {
   RoomState,
@@ -17,9 +16,20 @@ import {
   setScene,
   rollCompanion,
 } from "./game.js";
-import { artDirection, instructions, textTurn, tools } from "./dm.js";
+import { instructions, textTurn, tools } from "./dm.js";
 import { RoomStore, GameError } from "./store.js";
-export interface Settings {
+import {
+  BackgroundWorkers,
+  dispatchSchema,
+  type WorkerSettings,
+} from "./workers.js";
+import {
+  ensurePuzzles,
+  projectRoom,
+  submitPuzzle,
+  revealHint,
+} from "./puzzles.js";
+export interface Settings extends WorkerSettings {
   key: string;
   textModel: string;
   realtimeModel: string;
@@ -40,10 +50,9 @@ export class RoomRuntime {
   private voiceReady: Promise<void> | null = null;
   private thinking = false;
   private replyActive = false;
-  private generation = false;
-  private nextImage: Scene | null = null;
-  private imageCount = 0;
-  private imageWindow = Date.now();
+  workers: BackgroundWorkers;
+  private earlyCalls = new Map<string, unknown>();
+  private responseCalls = new Map<string, Set<string>>();
   private audioBytes = 0;
   private floorTimer: ReturnType<typeof setTimeout> | null = null;
   private toolRounds = 0;
@@ -72,16 +81,44 @@ export class RoomRuntime {
     this.state = store.load(id);
     this.state.rollDecision ??= null;
     this.state.preferences ??= { illustrations: true };
+    // Existing campaigns acquire puzzle progress on the next chapter, avoiding a silent reset.
+    const migrated = !this.state.puzzles;
+    ensurePuzzles(this.state);
+    if (migrated)
+      for (let i = 0; i < this.state.chapter; i++)
+        this.state.puzzles![i].solved = true;
+    this.workers = new BackgroundWorkers(
+      () => this.state,
+      () => this.publish(),
+      this.store,
+      this.settings,
+    );
     this.live.imageEnabled = this.state.preferences.illustrations;
     let interrupted = false;
+    let artworkMigrated = false;
     for (const scene of [this.state.scene, ...this.state.sceneHistory]) {
+      const replacement = {
+        "/art/shipwreck.png": "/art/shipwreck-sunburst.webp",
+        "/art/coastal-field-study.png":
+          "/art/coastal-field-study-sunburst.webp",
+      }[scene.imageUrl];
+      if (replacement) {
+        scene.imageUrl = replacement;
+        artworkMigrated = true;
+      }
       if (scene.status === "generating") {
         scene.status = "error";
         scene.error = "Painting was interrupted when the table restarted.";
         interrupted = true;
       }
     }
-    if (interrupted) this.store.save(this.state);
+    if (
+      interrupted ||
+      artworkMigrated ||
+      migrated ||
+      this.state.workers?.some((j) => j.error?.startsWith("Interrupted by"))
+    )
+      this.store.save(this.state);
   }
   config(): Configuration {
     return {
@@ -104,7 +141,15 @@ export class RoomRuntime {
       playerId: p.id,
       online: [...this.clients.values()].includes(p.id),
     }));
-    this.broadcast({ type: "state", state: this.state, live: this.live });
+    for (const [ws, id] of this.clients) {
+      const player = this.state.players.find((p) => p.id === id);
+      if (player)
+        this.send(ws, {
+          type: "state",
+          state: projectRoom(this.state, player),
+          live: this.live,
+        });
+    }
   }
   connect(ws: WebSocket, player: Player) {
     if (this.idleTimer) {
@@ -225,11 +270,22 @@ export class RoomRuntime {
       const staged = structuredClone(this.state);
       if (turn.consequences) applyConsequences(staged, turn.consequences);
       if (turn.check) requestCheck(staged, turn.check);
-      if (turn.scene) setScene(staged, turn.scene);
+      if (turn.scene)
+        setScene(staged, {
+          ...turn.scene,
+          visualPrompt: turn.scene.description,
+        });
       log(staged, "dm", turn.narration);
       this.state = staged;
       this.publish();
       if (turn.scene) this.enqueueImage(this.state.scene);
+      for (const task of turn.background ?? []) {
+        try {
+          this.workers.dispatch(task, "current");
+        } catch {
+          /* Optional notebook work cannot fail an accepted narrative turn. */
+        }
+      }
       if (this.state.pendingCheck?.characterId === "emily")
         npcRoll = this.rollNPC();
       this.live.dmStatus = this.realtime ? "ready" : "offline";
@@ -542,6 +598,43 @@ export class RoomRuntime {
       this.committedSpeakers.delete(event.item_id as string);
       this.publish();
     }
+    if (type === "response.output_item.done") {
+      const item = event.item as {
+        type: string;
+        status?: string;
+        name?: string;
+        arguments?: string;
+        call_id?: string;
+      };
+      if (
+        event.response_id === this.currentResponseId &&
+        item.type === "function_call" &&
+        item.status === "completed" &&
+        item.name === "dispatch_background" &&
+        item.call_id &&
+        !this.earlyCalls.has(item.call_id)
+      ) {
+        try {
+          const args = dispatchSchema.parse(JSON.parse(item.arguments ?? "{}"));
+          const result = this.workers.dispatch(
+            args.task,
+            args.contextId,
+            item.call_id,
+            true,
+          );
+          this.earlyCalls.set(item.call_id, result);
+          const calls =
+            this.responseCalls.get(this.currentResponseId!) ??
+            new Set<string>();
+          calls.add(item.call_id);
+          this.responseCalls.set(this.currentResponseId!, calls);
+        } catch (error) {
+          this.earlyCalls.set(item.call_id, {
+            error: error instanceof Error ? error.message : "Worker rejected",
+          });
+        }
+      }
+    }
     if (type === "response.done") {
       const response = event.response as {
         id: string;
@@ -557,7 +650,17 @@ export class RoomRuntime {
       if (this.currentResponseId !== response.id) return;
       this.replyActive = false;
       this.currentResponseId = null;
-      if (response.status === "failed") {
+      if (response.status !== "completed") {
+        for (const id of this.responseCalls.get(response.id) ?? []) {
+          this.workers.invalidate(id);
+          this.earlyCalls.delete(id);
+        }
+        this.responseCalls.delete(response.id);
+        if (response.status === "cancelled") {
+          this.live.dmStatus = this.realtime ? "ready" : "offline";
+          this.publish(false);
+          return;
+        }
         this.fail(
           new Error(
             response.status_details?.error?.message ??
@@ -566,6 +669,8 @@ export class RoomRuntime {
         );
         return;
       }
+      for (const id of this.responseCalls.get(response.id) ?? [])
+        this.workers.confirm(id);
       const calls =
         response.output?.filter((o) => o.type === "function_call") ?? [];
       if (calls.length) {
@@ -582,12 +687,26 @@ export class RoomRuntime {
           let result: unknown;
           try {
             const args = JSON.parse(call.arguments ?? "{}");
-            if (call.name === "request_check")
+            if (call.name === "dispatch_background") {
+              if (call.call_id && this.earlyCalls.has(call.call_id))
+                result = this.earlyCalls.get(call.call_id);
+              else {
+                const a = dispatchSchema.parse(args);
+                result = this.workers.dispatch(
+                  a.task,
+                  a.contextId,
+                  call.call_id,
+                );
+              }
+            } else if (call.name === "request_check")
               result = requestCheck(this.state, args);
             else if (call.name === "update_party")
               result = applyConsequences(this.state, args);
             else if (call.name === "illustrate_scene" && illustrates++ === 0) {
-              result = setScene(this.state, args);
+              result = setScene(this.state, {
+                ...args,
+                visualPrompt: args.description,
+              });
               this.enqueueImage(this.state.scene);
             } else throw new Error("Unknown or duplicate tool.");
           } catch (error) {
@@ -604,6 +723,9 @@ export class RoomRuntime {
             },
           });
         }
+        for (const id of this.responseCalls.get(response.id) ?? [])
+          this.earlyCalls.delete(id);
+        this.responseCalls.delete(response.id);
         this.publish();
         if (this.state.pendingCheck?.characterId === "emily") this.rollNPC();
         this.requestResponse();
@@ -648,105 +770,46 @@ export class RoomRuntime {
   toggleImages(enabled: boolean) {
     this.live.imageEnabled = enabled;
     this.state.preferences.illustrations = enabled;
+    if (!enabled) this.workers.pauseImages();
     this.publish();
   }
   retryImage() {
-    if (this.generation)
-      throw new GameError("An illustration is already being painted.", 409);
     if (!this.live.imageEnabled)
       throw new GameError("Enable scene illustrations first.");
+    if (this.state.scene.status !== "error")
+      throw new GameError("This scene does not need a retry.", 409);
     this.state.scene.status = "generating";
     delete this.state.scene.error;
-    this.publish();
     this.enqueueImage(this.state.scene);
+    this.publish();
   }
   private enqueueImage(scene: Scene) {
-    if (!this.live.imageEnabled) {
-      scene.status = "error";
-      scene.error = "Scene illustrations are paused.";
-      this.publish();
-      return;
-    }
-    if (this.nextImage && this.nextImage.id !== scene.id) {
-      this.nextImage.status = "error";
-      this.nextImage.error =
-        "A newer scene took its place before painting began.";
-    }
-    this.nextImage = scene;
-    if (!this.generation) void this.generateImage();
-  }
-  private async generateImage() {
-    const scene = this.nextImage;
-    if (!scene || this.closed) return;
-    this.nextImage = null;
-    this.generation = true;
-    if (Date.now() - this.imageWindow > 3600000) {
-      this.imageWindow = Date.now();
-      this.imageCount = 0;
-    }
     try {
-      this.requireAI();
-      if (this.imageCount >= 24)
-        throw new Error(
-          "This table has reached its 24 illustrations per hour limit.",
-        );
-      this.imageCount++;
-      const response = await fetch(
-        "https://api.openai.com/v1/images/generations",
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${this.settings.key}`,
-            "Content-Type": "application/json",
-          },
-          signal: AbortSignal.timeout(180000),
-          body: JSON.stringify({
-            model: this.settings.imageModel,
-            prompt: `${artDirection}\nCurrent scene: ${scene.title}, ${scene.location}. ${scene.description}\nVisual direction: ${scene.prompt}`,
-            quality: "low",
-            size: "1536x1024",
-            output_format: "webp",
-            n: 1,
-          }),
-        },
-      );
-      const result = (await response.json()) as {
-        data?: { b64_json?: string }[];
-        error?: { message?: string };
-      };
-      if (!response.ok)
-        throw new Error(
-          `Scene generation failed (${response.status}): ${result.error?.message ?? "Unknown error"}`,
-        );
-      const b64 = result.data?.[0]?.b64_json;
-      if (!b64) throw new Error("The image service returned no illustration.");
-      const directory = join(this.settings.dataDir, "images", this.state.id);
-      mkdirSync(directory, { recursive: true });
-      writeFileSync(
-        join(directory, `${scene.id}.webp`),
-        Buffer.from(b64, "base64"),
-      );
-      this.updateImage(scene.id, {
-        imageUrl: `/api/rooms/${this.state.id}/images/${scene.id}.webp`,
-        status: "ready",
-      });
+      this.workers.dispatch("illustration", "current");
     } catch (error) {
-      this.updateImage(scene.id, {
-        status: "error",
-        error:
-          error instanceof Error ? error.message : "Scene generation failed.",
-      });
-    } finally {
-      this.generation = false;
+      scene.status = "error";
+      scene.error =
+        error instanceof Error ? error.message : "Worker unavailable";
       this.publish();
-      if (this.nextImage) void this.generateImage();
     }
   }
-  private updateImage(id: string, patch: Partial<Scene>) {
-    const scene = [this.state.scene, ...this.state.sceneHistory].find(
-      (s) => s.id === id,
-    );
-    if (scene) Object.assign(scene, patch);
+  puzzleAnswer(player: Player, id: string, answer: string) {
+    const result = submitPuzzle(this.state, player, id, answer);
+    if (
+      result.solved &&
+      !this.state.journal.some(
+        (e) =>
+          e.kind === "system" && e.text === `Evidence puzzle solved: ${id}.`,
+      )
+    )
+      log(this.state, "system", `Evidence puzzle solved: ${id}.`);
+    this.publish();
+    return result;
+  }
+  puzzleHint(id: string) {
+    const result = revealHint(this.state, id);
+    this.publish();
+    return result;
   }
   stopVoice() {
     if (this.floorTimer) clearTimeout(this.floorTimer);
@@ -758,6 +821,10 @@ export class RoomRuntime {
       this.realtime = null;
       ws.close();
     }
+    for (const ids of this.responseCalls.values())
+      for (const id of ids) this.workers.invalidate(id);
+    this.responseCalls.clear();
+    this.earlyCalls.clear();
     this.replyActive = false;
     this.currentResponseId = null;
     this.speakerCommits = [];
@@ -769,6 +836,8 @@ export class RoomRuntime {
   }
   close() {
     this.closed = true;
+    this.workers.close();
+    this.store.save(this.state);
     if (this.idleTimer) clearTimeout(this.idleTimer);
     this.stopVoice();
     for (const ws of this.clients.keys()) ws.close();

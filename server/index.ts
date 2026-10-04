@@ -10,6 +10,7 @@ import { z } from "zod";
 import { createServer as createViteServer } from "vite";
 import { RoomStore, GameError } from "./store.js";
 import { RoomRuntime, socketMessage, type Settings } from "./runtime.js";
+import { projectRoom } from "./puzzles.js";
 import { rollCheck, rerollCheck, acceptRoll } from "./game.js";
 if (existsSync(".env")) process.loadEnvFile(".env");
 const production = process.env.NODE_ENV === "production";
@@ -20,6 +21,17 @@ const settings: Settings = {
   textModel: process.env.OPENAI_TEXT_MODEL ?? "gpt-6.1-sol",
   realtimeModel: process.env.OPENAI_REALTIME_MODEL ?? "gpt-realtime-2.1",
   imageModel: process.env.OPENAI_IMAGE_MODEL ?? "gpt-image-2.5-flare",
+  workerModel: process.env.OPENAI_WORKER_MODEL ?? "gpt-5.4-nano",
+  ...(process.env.SYSTEM_ONE_BASE_URL
+    ? {
+        systemOne: {
+          baseUrl: process.env.SYSTEM_ONE_BASE_URL,
+          model: process.env.SYSTEM_ONE_MODEL ?? "jev-1.13.0",
+          key: process.env.SYSTEM_ONE_API_KEY ?? "",
+          shadow: process.env.SYSTEM_ONE_SHADOW !== "false",
+        },
+      }
+    : {}),
   dataDir: resolve(process.env.DATA_DIR ?? "data"),
 };
 const store = new RoomStore(settings.dataDir);
@@ -79,6 +91,13 @@ const server = createServer(async (req, res) => {
       req.url ?? "/",
       `http://${req.headers.host ?? "localhost"}`,
     );
+    // The DM map is internal campaign knowledge, including in Vite development.
+    if (
+      /(?:^|\/)(?:assets\/dm(?:\/|$)|server\/campaign-map\.json(?:$|\?))/.test(
+        decodeURIComponent(url.pathname),
+      )
+    )
+      throw new GameError("Not found.", 404);
     if (url.pathname.startsWith("/api/")) {
       const origin = req.headers.origin;
       if (origin && new URL(origin).host !== req.headers.host)
@@ -95,7 +114,17 @@ const server = createServer(async (req, res) => {
         const value = createSchema.parse(await body(req));
         const created = store.create(value.name, value.characterId);
         runtime(created.state.id);
-        return json(res, created, 201);
+        return json(
+          res,
+          {
+            ...created,
+            state: projectRoom(
+              runtime(created.state.id).state,
+              created.state.players[0],
+            ),
+          },
+          201,
+        );
       }
       const match = url.pathname.match(
         /^\/api\/rooms\/([a-z0-9_-]{4,20})(?:\/(.*))?$/,
@@ -108,7 +137,19 @@ const server = createServer(async (req, res) => {
         const room = runtime(id);
         room.state = joined.state;
         room.publish(false);
-        return json(res, joined, 201);
+        return json(
+          res,
+          {
+            ...joined,
+            state: projectRoom(
+              room.state,
+              joined.state.players.find(
+                (p) => p.id === joined.credentials.playerId,
+              )!,
+            ),
+          },
+          201,
+        );
       }
       const token = (req.headers.authorization ?? "").replace(/^Bearer /, "");
       // Image requests use an HttpOnly room cookie; API requests use the seat token.
@@ -125,7 +166,7 @@ const server = createServer(async (req, res) => {
           `ws_${id}=${token || cookieToken}; HttpOnly; SameSite=Strict; Path=/api/rooms/${id}/images/; Max-Age=2592000${req.headers["x-forwarded-proto"] === "https" ? "; Secure" : ""}`,
         );
         return json(res, {
-          state: room.state,
+          state: projectRoom(room.state, player),
           live: room.live,
           config: room.config(),
         });
@@ -145,6 +186,27 @@ const server = createServer(async (req, res) => {
       }
       if (req.method !== "POST") throw new GameError("Not found.", 404);
       const value = await body(req);
+      if (route === "puzzle-answer") {
+        const v = z
+          .object({
+            puzzleId: z.string().max(60),
+            answer: z.string().trim().min(1).max(200),
+          })
+          .parse(value);
+        return json(res, room.puzzleAnswer(player, v.puzzleId, v.answer));
+      }
+      if (route === "puzzle-hint") {
+        const v = z.object({ puzzleId: z.string().max(60) }).parse(value);
+        return json(res, room.puzzleHint(v.puzzleId));
+      }
+      if (route === "background") {
+        const v = z
+          .object({ task: z.enum(["recap", "language_coach"]) })
+          .parse(value);
+        if (room.state.phase !== "playing")
+          throw new GameError("Start the adventure first.", 409);
+        return json(res, room.workers.dispatch(v.task, "current"));
+      }
       if (route === "start") {
         await room.start(player);
         return json(res, { ok: true });

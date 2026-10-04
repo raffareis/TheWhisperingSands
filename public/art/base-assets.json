@@ -1,0 +1,438 @@
+{
+  "schema_version": 1,
+  "style": {
+    "id": "saltwater-field-archive",
+    "description": "Maritime archaeological field archive: matte gouache and sparse pencil on warm ivory paper, sea-grey and eucalyptus green, raw umber and restrained ochre. Visible dry brush, tactile wear, credible intimate scale. Use coastal-field-study for painterly treatment; preserve character identities and canonical object silhouettes from their own references. No neon, glossy fantasy effects, text, numbers or interface.",
+    "reference_ids": ["coastal-field-study"]
+  },
+  "assets": [
+    {
+      "id": "shipwreck",
+      "path": "/art/shipwreck-sunburst.webp",
+      "role": "environment",
+      "tags": ["coast", "shore", "wreck", "beach", "storm", "island"],
+      "visual_description": "Original composition reference: storm-damaged boat timbers and rope on a tropical shore, cliffs, forest edge with a carved tree, post-storm dawn. Environment only.",
+      "provenance": {
+        "mode": "imagegen CLI/API",
+        "model": "gpt-image-2.5-sunburst",
+        "quality": "medium",
+        "size": "1536x1024",
+        "background": "opaque",
+        "output_format": "webp",
+        "output_compression": 90,
+        "generated_at": "2026-10-04T05:26:40.530Z",
+        "duration_ms": 24127,
+        "prompt": "Use case: illustration-story\nAsset type: canonical base asset for The Whispering Sands\nImage 1 is the geographical reference of the storm-wrecked shore. Image 2 is the canonical Sunburst painting-style reference. Repaint the opening scene in exactly that matte gouache language: scattered wreck timber and rope, grey ocean, wet beach, jungle edge with the existing carved tree and misty cliffs. Preserve the geography and existing carving motif, remove theatrical golden sunbeams in favour of overcast soft morning. No people or talisman, no new plot clues, no buildings.\nStyle: Distinctly hand-painted matte gouache with sparse graphite and scratched ink on warm ivory paper. Visible dry brush and pigment texture, simplified masses, careful observed details, restrained sea-grey, dusty eucalyptus/olive, raw umber and pale ochre. Intimate archaeological field journal illustration, not a photograph, not glossy 3D or fantasy concept art. No words, lettering, numbers, logos, watermark or interface.",
+        "reference_ids": ["coastal-field-study"],
+        "source_references": [
+          {
+            "path": "/art/shipwreck.png",
+            "sha256": "042fe5f1db23fdbcecf34c5c00cbf6fe0e6ede480608cf3664de796cef1c6971"
+          },
+          {
+            "path": "/art/coastal-field-study-sunburst.webp",
+            "sha256": "9dfdecd7f2b6b953d25a482e136012ccb2ba49d2c944b06d8c75acdb22287eba"
+          }
+        ],
+        "metrics": [
+          {
+            "event": "image_generation_completed",
+            "job": "edit",
+            "model": "gpt-image-2.5-sunburst",
+            "elapsed_seconds": 23.806,
+            "request_id": "req_8f8d7e196ecf42d2b0258344e0bedf45",
+            "usage": {
+              "input_tokens": 3302,
+              "input_tokens_details": {
+                "image_tokens": 3072,
+                "text_tokens": 230
+              },
+              "output_tokens": 343,
+              "total_tokens": 3645,
+              "output_tokens_details": {
+                "image_tokens": 343,
+                "text_tokens": 0
+              }
+            }
+          }
+        ],
+        "output_sha256": "c56cbeea3fd784225c313cfa2ef9fbdfaab98bec902ecd9d8d6c81e13df2bd2d"
+      }
+    },
+    {
+      "id": "sam",
+      "path": "/art/sam-sunburst.webp",
+      "role": "character",
+      "tags": ["sam", "Samuel", "party", "family"],
+      "visual_description": "Samuel, a middle-aged former military officer and outdoor guide. Short salt-and-pepper hair, stubble, weathered olive shirt; grounded kind but alert face.",
+      "provenance": {
+        "mode": "imagegen CLI/API",
+        "model": "gpt-image-2.5-sunburst",
+        "quality": "medium",
+        "size": "1024x1024",
+        "background": "opaque",
+        "output_format": "webp",
+        "output_compression": 90,
+        "generated_at": "2026-10-04T05:26:39.688Z",
+        "duration_ms": 23282,
+        "prompt": "Use case: illustration-story\nAsset type: canonical base asset for The Whispering Sands\nImage 1 is Samuel's canonical identity reference. Image 2 is the painting-style reference only. Preserve this specific fictional middle-aged man's face, features, short salt-and-pepper hair and stubble, weathered olive field shirt and practical backpack straps. Transform the photo-like rendering into the same matte gouache/graphite field illustration as image 2. Chest-up square portrait, whole head visible, eyes in upper third, subdued forest and mist background. Kind, alert, ordinary resilient father and outdoor guide, not a superhero. No accessories added.\nStyle: Distinctly hand-painted matte gouache with sparse graphite and scratched ink on warm ivory paper. Visible dry brush and pigment texture, simplified masses, careful observed details, restrained sea-grey, dusty eucalyptus/olive, raw umber and pale ochre. Intimate archaeological field journal illustration, not a photograph, not glossy 3D or fantasy concept art. No words, lettering, numbers, logos, watermark or interface.",
+        "reference_ids": ["coastal-field-study"],
+        "source_references": [
+          {
+            "path": "/art/sam.png",
+            "sha256": "c7974630d777814e731e9e99fc504c50a2070ce598ff25093bccd21f264f186f"
+          },
+          {
+            "path": "/art/coastal-field-study-sunburst.webp",
+            "sha256": "9dfdecd7f2b6b953d25a482e136012ccb2ba49d2c944b06d8c75acdb22287eba"
+          }
+        ],
+        "metrics": [
+          {
+            "event": "image_generation_completed",
+            "job": "edit",
+            "model": "gpt-image-2.5-sunburst",
+            "elapsed_seconds": 23.023,
+            "request_id": "req_ec4e8f230d954581bd8b9b515e0df6ad",
+            "usage": {
+              "input_tokens": 3313,
+              "input_tokens_details": {
+                "image_tokens": 3072,
+                "text_tokens": 241
+              },
+              "output_tokens": 439,
+              "total_tokens": 3752,
+              "output_tokens_details": {
+                "image_tokens": 439,
+                "text_tokens": 0
+              }
+            }
+          }
+        ],
+        "output_sha256": "7c37c17ce83026f2d9add62b62f63d1f8699a80c39b25d10618b3dcbcdfd82fa"
+      }
+    },
+    {
+      "id": "liz",
+      "path": "/art/liz-sunburst.webp",
+      "role": "character",
+      "tags": ["liz", "Elizabeth", "party", "family"],
+      "visual_description": "Elizabeth, middle-aged archaeologist, brown hair loosely tied back, pale linen field shirt, thoughtful warm expression.",
+      "provenance": {
+        "mode": "imagegen CLI/API",
+        "model": "gpt-image-2.5-sunburst",
+        "quality": "medium",
+        "size": "1024x1024",
+        "background": "opaque",
+        "output_format": "webp",
+        "output_compression": 90,
+        "generated_at": "2026-10-04T05:26:59.884Z",
+        "duration_ms": 20193,
+        "prompt": "Use case: illustration-story\nAsset type: canonical base asset for The Whispering Sands\nImage 1 is Elizabeth's canonical identity reference. Image 2 is the painting-style reference only. Preserve this specific fictional middle-aged woman's face, features, brown eyes, loosely tied brown hair, pale linen field shirt, practical shoulder straps and warm thoughtful expression. Transform into matte gouache/graphite field illustration matching image 2. Chest-up square portrait, whole head visible, eyes in upper third, subdued island foliage and mist background. She is a capable archaeologist and Emily's mother. No makeup glamour, no new accessories. Remove the decorative pendant so it cannot be mistaken for the story's talisman.\nStyle: Distinctly hand-painted matte gouache with sparse graphite and scratched ink on warm ivory paper. Visible dry brush and pigment texture, simplified masses, careful observed details, restrained sea-grey, dusty eucalyptus/olive, raw umber and pale ochre. Intimate archaeological field journal illustration, not a photograph, not glossy 3D or fantasy concept art. No words, lettering, numbers, logos, watermark or interface.",
+        "reference_ids": ["coastal-field-study"],
+        "source_references": [
+          {
+            "path": "/art/liz.png",
+            "sha256": "6d385ac204a7532d0716d4c919944bbed128f575001f0a4a5b504af9bfb0edde"
+          },
+          {
+            "path": "/art/coastal-field-study-sunburst.webp",
+            "sha256": "9dfdecd7f2b6b953d25a482e136012ccb2ba49d2c944b06d8c75acdb22287eba"
+          }
+        ],
+        "metrics": [
+          {
+            "event": "image_generation_completed",
+            "job": "edit",
+            "model": "gpt-image-2.5-sunburst",
+            "elapsed_seconds": 20.029,
+            "request_id": "req_1f690f695b1c4a93868dd5f38a5fd595",
+            "usage": {
+              "input_tokens": 3325,
+              "input_tokens_details": {
+                "image_tokens": 3072,
+                "text_tokens": 253
+              },
+              "output_tokens": 439,
+              "total_tokens": 3764,
+              "output_tokens_details": {
+                "image_tokens": 439,
+                "text_tokens": 0
+              }
+            }
+          }
+        ],
+        "output_sha256": "dd331861ce179e3442565c3884899d239fd7d92416939b493ce7aa749072d8dc"
+      }
+    },
+    {
+      "id": "emily",
+      "path": "/art/emily-sunburst.webp",
+      "role": "character",
+      "tags": ["emily", "Emily", "party", "family"],
+      "visual_description": "Emily, sixteen-year-old daughter, brown ponytail, practical teal outdoor jacket, curious brave face. Age-appropriate ordinary teenager.",
+      "provenance": {
+        "mode": "imagegen CLI/API",
+        "model": "gpt-image-2.5-sunburst",
+        "quality": "medium",
+        "size": "1024x1024",
+        "background": "opaque",
+        "output_format": "webp",
+        "output_compression": 90,
+        "generated_at": "2026-10-04T05:27:02.074Z",
+        "duration_ms": 21540,
+        "prompt": "Use case: illustration-story\nAsset type: canonical base asset for The Whispering Sands\nImage 1 is Emily's canonical identity reference. Image 2 is painting-style reference only. Preserve this fictional girl's recognizable face, brown eyes, freckles, brown ponytail, practical teal outdoor jacket and backpack straps. She is SIXTEEN YEARS OLD, the teenage daughter of Sam and Liz: clearly a youthful ordinary teen, soft adolescent facial proportions, no adult face ageing, no makeup. Curious, observant and brave. Fully clothed practical outdoor look. Chest-up square portrait, whole head visible and eyes in upper third. Repaint into matte gouache and graphite matching image 2 with subdued island foliage and mist. No mature fashion styling, no heroic armour, no new accessories.\nStyle: Distinctly hand-painted matte gouache with sparse graphite and scratched ink on warm ivory paper. Visible dry brush and pigment texture, simplified masses, careful observed details, restrained sea-grey, dusty eucalyptus/olive, raw umber and pale ochre. Intimate archaeological field journal illustration, not a photograph, not glossy 3D or fantasy concept art. No words, lettering, numbers, logos, watermark or interface.",
+        "reference_ids": ["coastal-field-study"],
+        "source_references": [
+          {
+            "path": "/art/emily.png",
+            "sha256": "19c270de2bd946e9bffdeb5cc3956af9ad1b9d581f63bfbd951f0b48222ac5a4"
+          },
+          {
+            "path": "/art/coastal-field-study-sunburst.webp",
+            "sha256": "9dfdecd7f2b6b953d25a482e136012ccb2ba49d2c944b06d8c75acdb22287eba"
+          }
+        ],
+        "metrics": [
+          {
+            "event": "image_generation_completed",
+            "job": "edit",
+            "model": "gpt-image-2.5-sunburst",
+            "elapsed_seconds": 21.327,
+            "request_id": "req_4f12b657f48f46f1a6d4706b545db3d7",
+            "usage": {
+              "input_tokens": 3340,
+              "input_tokens_details": {
+                "image_tokens": 3072,
+                "text_tokens": 268
+              },
+              "output_tokens": 439,
+              "total_tokens": 3779,
+              "output_tokens_details": {
+                "image_tokens": 439,
+                "text_tokens": 0
+              }
+            }
+          }
+        ],
+        "output_sha256": "30d9c96581851ceccecc5a1b3775e2ac7aac7aab3d1398f030a1ab1e4c9e977a"
+      }
+    },
+    {
+      "id": "coastal-field-study",
+      "path": "/art/coastal-field-study-sunburst.webp",
+      "role": "style",
+      "tags": [
+        "canonical-style",
+        "gouache",
+        "field-notebook",
+        "coast",
+        "shore",
+        "wreck",
+        "island"
+      ],
+      "visual_description": "Canonical scene treatment: matte hand-painted gouache expedition plate of storm-wrecked shore, pale mist and warm exposed paper, broken wood and rope, rocky cliffs, olive forest and carved tree. Preserve geography only for shore scenes; use brush treatment and palette for all locations.",
+      "provenance": {
+        "mode": "imagegen CLI/API",
+        "model": "gpt-image-2.5-sunburst",
+        "quality": "medium",
+        "size": "1536x1024",
+        "background": "opaque",
+        "output_format": "webp",
+        "output_compression": 90,
+        "generated_at": "2026-10-04T05:25:01.845Z",
+        "duration_ms": 21792,
+        "prompt": "Use case: illustration-story\nAsset type: canonical base asset for The Whispering Sands\nImage 1 is the target and approved composition: a post-storm tropical shore, wrecked small boat planks and rope in the left foreground, quiet grey waves, wet sand, misty forested rocky cliffs, carved tree on right. Preserve this geography and calm asymmetrical composition, no characters. Refine into the canonical painted field-journal plate. Broad pale sky, brush masses, paper visible at the edges, fine wood details. Do not add objects, magical light, talismans, buildings or spectacular sunbeams.\nStyle: Distinctly hand-painted matte gouache with sparse graphite and scratched ink on warm ivory paper. Visible dry brush and pigment texture, simplified masses, careful observed details, restrained sea-grey, dusty eucalyptus/olive, raw umber and pale ochre. Intimate archaeological field journal illustration, not a photograph, not glossy 3D or fantasy concept art. No words, lettering, numbers, logos, watermark or interface.",
+        "reference_ids": [],
+        "source_references": [
+          {
+            "path": "/art/coastal-field-study.png",
+            "sha256": "d219554fe974148763333fdc5a38e365686b224e8586a3127056f61154263d38"
+          }
+        ],
+        "metrics": [
+          {
+            "event": "image_generation_completed",
+            "job": "edit",
+            "model": "gpt-image-2.5-sunburst",
+            "elapsed_seconds": 20.605,
+            "request_id": "req_1897745368ac4566becd6cfabc22cecd",
+            "usage": {
+              "input_tokens": 1764,
+              "input_tokens_details": {
+                "image_tokens": 1536,
+                "text_tokens": 228
+              },
+              "output_tokens": 343,
+              "total_tokens": 2107,
+              "output_tokens_details": {
+                "image_tokens": 343,
+                "text_tokens": 0
+              }
+            }
+          }
+        ],
+        "output_sha256": "9dfdecd7f2b6b953d25a482e136012ccb2ba49d2c944b06d8c75acdb22287eba"
+      }
+    },
+    {
+      "id": "pocket-knife",
+      "path": "/art/pocket-knife-sunburst.webp",
+      "role": "object",
+      "tags": ["knife", "pocketknife", "blade", "sam", "tool"],
+      "visual_description": "Sam’s folding pocketknife: weathered walnut handle with brass rivets, opened halfway, practical scratched grey-steel blade. Transparent cutout, no lettering.",
+      "provenance": {
+        "mode": "imagegen CLI/API",
+        "model": "gpt-image-2.5-sunburst",
+        "quality": "medium",
+        "size": "1024x1024",
+        "background": "transparent",
+        "output_format": "webp",
+        "output_compression": 90,
+        "generated_at": "2026-10-04T05:27:21.367Z",
+        "duration_ms": 21480,
+        "prompt": "Use case: illustration-story\nAsset type: canonical base asset for The Whispering Sands\nImage 1 is the canonical object shape and materials. Image 2 is the painting-style reference only; do not transfer its landscape or paper background. Preserve a single practical folding pocketknife with half-open scratched steel blade, weathered walnut handle and brass rivets. Repaint as a carefully observed graphite and matte gouache specimen with simplified brush texture. Complete object centered diagonally inside a square with generous margins. Preserve genuine transparent alpha outside object. No ground, no background, no shadow aura, no added props.\nStyle: Distinctly hand-painted matte gouache with sparse graphite and scratched ink on warm ivory paper. Visible dry brush and pigment texture, simplified masses, careful observed details, restrained sea-grey, dusty eucalyptus/olive, raw umber and pale ochre. Intimate archaeological field journal illustration, not a photograph, not glossy 3D or fantasy concept art. No words, lettering, numbers, logos, watermark or interface.",
+        "reference_ids": ["coastal-field-study"],
+        "source_references": [
+          {
+            "path": "/art/pocket-knife.png",
+            "sha256": "96232e3f62f0e459d5403d540545f7764436f99ece2a43219122aa01b8dc6556"
+          },
+          {
+            "path": "/art/coastal-field-study-sunburst.webp",
+            "sha256": "9dfdecd7f2b6b953d25a482e136012ccb2ba49d2c944b06d8c75acdb22287eba"
+          }
+        ],
+        "metrics": [
+          {
+            "event": "image_generation_completed",
+            "job": "edit",
+            "model": "gpt-image-2.5-sunburst",
+            "elapsed_seconds": 21.315,
+            "request_id": "req_a8fe31cf6b394ed0994cf78c0cd2a9bd",
+            "usage": {
+              "input_tokens": 3305,
+              "input_tokens_details": {
+                "image_tokens": 3072,
+                "text_tokens": 233
+              },
+              "output_tokens": 439,
+              "total_tokens": 3744,
+              "output_tokens_details": {
+                "image_tokens": 439,
+                "text_tokens": 0
+              }
+            }
+          }
+        ],
+        "output_sha256": "6f24a8f23717b6ea5be4d4daec85f222f2f36da2050a52fb8f6956365641373c"
+      }
+    },
+    {
+      "id": "field-notebook",
+      "path": "/art/field-notebook-sunburst.webp",
+      "role": "object",
+      "tags": ["notebook", "book", "pencil", "liz", "archaeology"],
+      "visual_description": "Liz’s closed salt-stained field notebook, olive-brown cloth cover, faded red linen spine, wavy cream pages; graphite pencil under elastic strap. Transparent cutout, no writing visible.",
+      "provenance": {
+        "mode": "imagegen CLI/API",
+        "model": "gpt-image-2.5-sunburst",
+        "quality": "medium",
+        "size": "1024x1024",
+        "background": "transparent",
+        "output_format": "webp",
+        "output_compression": 90,
+        "generated_at": "2026-10-04T05:27:21.980Z",
+        "duration_ms": 19903,
+        "prompt": "Use case: illustration-story\nAsset type: canonical base asset for The Whispering Sands\nImage 1 is the canonical object reference. Image 2 is the painting-style reference only; do not transfer landscape or paper background. Preserve the closed salt-stained notebook: worn olive-brown cloth cover, faded red linen spine, wavy cream pages, elastic band and one graphite pencil beneath it. Repaint as a tactile matte gouache/graphite specimen. Square composition, single entire notebook and pencil centered with generous margins. Genuine transparent alpha outside object, no ground or shadow aura. No readable text, marks implying a puzzle answer, or added props.\nStyle: Distinctly hand-painted matte gouache with sparse graphite and scratched ink on warm ivory paper. Visible dry brush and pigment texture, simplified masses, careful observed details, restrained sea-grey, dusty eucalyptus/olive, raw umber and pale ochre. Intimate archaeological field journal illustration, not a photograph, not glossy 3D or fantasy concept art. No words, lettering, numbers, logos, watermark or interface.",
+        "reference_ids": ["coastal-field-study"],
+        "source_references": [
+          {
+            "path": "/art/field-notebook.png",
+            "sha256": "ee7e73e76e5a42143fff0b258ee965a377192d3397f4616ce7e04e548ca5b7a0"
+          },
+          {
+            "path": "/art/coastal-field-study-sunburst.webp",
+            "sha256": "9dfdecd7f2b6b953d25a482e136012ccb2ba49d2c944b06d8c75acdb22287eba"
+          }
+        ],
+        "metrics": [
+          {
+            "event": "image_generation_completed",
+            "job": "edit",
+            "model": "gpt-image-2.5-sunburst",
+            "elapsed_seconds": 19.708,
+            "request_id": "req_42b9e2003e2f419c8c935b3061beb975",
+            "usage": {
+              "input_tokens": 3315,
+              "input_tokens_details": {
+                "image_tokens": 3072,
+                "text_tokens": 243
+              },
+              "output_tokens": 439,
+              "total_tokens": 3754,
+              "output_tokens_details": {
+                "image_tokens": 439,
+                "text_tokens": 0
+              }
+            }
+          }
+        ],
+        "output_sha256": "10beedfa676e795af4811cef7a5c17ac582d8c839fa6a9423a3c03c284683b69"
+      }
+    },
+    {
+      "id": "ancient-talisman",
+      "path": "/art/ancient-talisman-sunburst.webp",
+      "role": "object",
+      "tags": ["talisman", "amulet", "bronze", "spiral", "artifact"],
+      "visual_description": "Palm-sized handworked dark bronze pendant, uneven rounded contour, suspension hole and broken plant cord, spiral and three decorative wave incisions, verdigris in recesses. No glow or encoded answer. Transparent cutout.",
+      "provenance": {
+        "mode": "imagegen CLI/API",
+        "model": "gpt-image-2.5-sunburst",
+        "quality": "medium",
+        "size": "1024x1024",
+        "background": "transparent",
+        "output_format": "webp",
+        "output_compression": 90,
+        "generated_at": "2026-10-04T05:27:41.172Z",
+        "duration_ms": 19802,
+        "prompt": "Use case: illustration-story\nAsset type: canonical base asset for The Whispering Sands\nImage 1 is the canonical object's exact silhouette, carving and materials. Image 2 is painting-style reference only; do not transfer landscape or paper background. Preserve the irregular palm-sized dark bronze pendant, suspension hole and small broken plant cord, single spiral and three carved waves, verdigris in incisions and rubbed metal edges. Repaint as a precise matte gouache/graphite specimen. Do not change the carving; decorative motif only, no encoded answer. Center whole object within square with clear margins. Genuine transparent alpha outside object, no background, ground, glow or shadow aura, no gemstones or additional props.\nStyle: Distinctly hand-painted matte gouache with sparse graphite and scratched ink on warm ivory paper. Visible dry brush and pigment texture, simplified masses, careful observed details, restrained sea-grey, dusty eucalyptus/olive, raw umber and pale ochre. Intimate archaeological field journal illustration, not a photograph, not glossy 3D or fantasy concept art. No words, lettering, numbers, logos, watermark or interface.",
+        "reference_ids": ["coastal-field-study"],
+        "source_references": [
+          {
+            "path": "/art/ancient-talisman.png",
+            "sha256": "b441a014334e9920c8cb043f852527701752d08c9e564a7a5ac20645b0ce43fd"
+          },
+          {
+            "path": "/art/coastal-field-study-sunburst.webp",
+            "sha256": "9dfdecd7f2b6b953d25a482e136012ccb2ba49d2c944b06d8c75acdb22287eba"
+          }
+        ],
+        "metrics": [
+          {
+            "event": "image_generation_completed",
+            "job": "edit",
+            "model": "gpt-image-2.5-sunburst",
+            "elapsed_seconds": 19.628,
+            "request_id": "req_eeff9d49791140c0a5d86b13047faa96",
+            "usage": {
+              "input_tokens": 3326,
+              "input_tokens_details": {
+                "image_tokens": 3072,
+                "text_tokens": 254
+              },
+              "output_tokens": 439,
+              "total_tokens": 3765,
+              "output_tokens_details": {
+                "image_tokens": 439,
+                "text_tokens": 0
+              }
+            }
+          }
+        ],
+        "output_sha256": "d94d4fc52cb2f35b9c948cebca6dd76ab0cbd47f10b95c3894e8e6ab874caa1e"
+      }
+    }
+  ]
+}

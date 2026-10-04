@@ -1,9 +1,9 @@
 # The Whispering Sands
 
-Uma mesa de RPG para **Rafael e Meg**, cada um no próprio celular ou computador,
+Uma mesa de RPG para **Rafael e Meg e duplas de alunos**, cada um no próprio celular ou computador,
 inteiramente em inglês. A história escrita para uma aula de inglês virou uma
 aventura compartilhada: um mestre por voz, cenas ilustradas durante a partida,
-fichas, inventário, pistas e diário persistente. Escopo e implementação: [#1](https://github.com/raffareis/TheWhisperingSands/issues/1).
+fichas, inventário, pistas e diário persistente. Escopo inicial: [#1](https://github.com/raffareis/TheWhisperingSands/issues/1). Revamp artístico, enigmas e workers: [#2](https://github.com/raffareis/TheWhisperingSands/issues/2).
 
 ## Jogar
 
@@ -18,7 +18,13 @@ fichas, inventário, pistas e diário persistente. Escopo e implementação: [#1
    Uma falha permite **Accept setback** ou **Push your luck**, uma nova tentativa por 1 HP,
    se houver vida suficiente. O mestre recebe o resultado verdadeiro.
 
-A página central acompanha a cena; a ficha mostra atributos, vida e itens.
+6. **Evidence** mostra seu registro privado. Descreva-o em inglês ao parceiro;
+   ele possui outra parte. Cada assento envia sua própria resposta. As duas
+   precisam ser aceitas para abrir a passagem. Há três níveis de ajuda, e erros
+   nos enigmas não tiram vida. Dados e Emily não substituem a resolução.
+
+A página central acompanha a cena; a ficha mostra atributos, vida e objetos
+ilustrados que podem ser examinados.
 **Clues** registra apenas descobertas da partida. **Journal** guarda conversa,
 rolagens e acontecimentos. As imagens aparecem quando ficam prontas, enquanto a
 conversa continua. A ilustração anterior permanece visível durante a pintura.
@@ -44,9 +50,13 @@ OPENAI_ENV_FILE=/caminho/privado/.env ./bin/dev
 
 Os padrões configuráveis são `gpt-realtime-2.1` para voz, `gpt-6.1-sol` para texto
 sem uma sessão de voz ativa e `gpt-image-2.5-flare` para ilustrações. Voz e imagens
-utilizam a API paga; a arte inicial foi feita com a ferramenta nativa `imagegen`.
+utilizam a API paga. O banco preparado usa `gpt-image-2.5-sunburst`; durante a
+partida o Flare compõe novas cenas a partir dessas imagens de referência.
 É possível pausar novas ilustrações nas configurações da mesa. O servidor limita
-cada sala a 24 imagens por hora e a uma geração em andamento, com fila da cena mais recente.
+cada sala a 24 tentativas de imagem por hora e a instalação a 120; os limites
+persistem em SQLite e contam inclusive tentativas com falha. Há uma renderização
+por mesa; uma cena nova substitui a pendente e aborta a antiga em andamento.
+Abortar não comprova que o provedor deixou de cobrar a tentativa.
 
 ### Servidor com build
 
@@ -96,7 +106,7 @@ npm run build
 npm run format:check
 ```
 
-Os testes verificam regras, autorização das rolagens, decisão e custo de nova
+Os 32 testes verificam regras, autorização das rolagens, decisão e custo de nova
 tentativa, consequências, persistência, isolamento de salas, transporte HTTP e
 WebSocket, sessão Realtime compartilhada, execução de ferramentas e atribuição de
 transcrições que chegam fora de ordem. Não usam a API paga.
@@ -118,16 +128,131 @@ físicos ou dois celulares reais. A interface foi verificada no preview T3 com
 
 ## Arte e história
 
-Os Markdown numerados, `Encounters/` e `Assets/` preservam a aventura original.
-O mestre carrega esse conteúdo como referência privada, incluindo os enigmas.
-Sam começa com um canivete e Liz com um caderno de campo: itens iniciais definidos
-para esta adaptação, sem alterar os arquivos originais.
+O guia revisado `06_StoryGuide.md` e `server/puzzles.ts` substituem os antigos
+roteiros de puzzles. O mestre carrega somente intro, regras, personagens e esse
+guia; os demais capítulos e encontros antigos permanecem como material histórico.
+Sam começa com um canivete e Liz com um caderno de campo. O mistério das vozes
+roubadas conecta cinco desafios: carga, mapa, cronologia, phrasal verbs e uma
+promessa condicional que reutiliza as descobertas. Leitura intermediária como
+alvo de design, sem avaliação formal de nível ou penalidade por sotaque.
 
-A ilustração de abertura e os retratos fictícios estão em `public/art/`, com os
-prompts finais e a origem em [`public/art/assets.json`](public/art/assets.json).
-São os assets iniciais consumidos pelo app. Imagens de partidas e builds são
-gerados fora do Git.
+As pistas e respostas ficam no servidor. HTTP e WebSocket projetam somente o
+registro do próprio assento. O DM recebe objetivo, progresso e hints já pedidos,
+sem cartões privados ou soluções. Texto dos puzzles é HTML determinístico; imagens
+nunca são a fonte de letras, números ou respostas.
 
-Referências oficiais usadas na integração: [Realtime por WebSocket](https://developers.openai.com/api/docs/guides/voice-websockets?voice-api=realtime),
-[conversas Realtime e ferramentas](https://developers.openai.com/api/docs/guides/realtime-conversations)
-e [geração de imagens](https://developers.openai.com/api/docs/guides/image-generation).
+O mapa privado da ilha está em `assets/dm/island-map.svg`; o grafo canônico em
+`server/campaign-map.json` define oito locais, caminhos, marés, visibilidade e
+as cinco passagens dependentes dos enigmas. `server/campaign-map.ts` entrega ao
+DM uma orientação compacta da área, vizinhos e estado dos gates, sem chamada de
+visão. O anchor do capítulo é apenas fallback: não move os personagens.
+O desenho cartográfico é SVG vetorial com rótulos exatos em inglês; o grid local
+das nove pedras não é o mapa da ilha nem revela a solução.
+
+O mapa e o grafo ficam fora de `public/`, do estado HTTP/WebSocket e do contexto
+dos workers de imagem. Rotas diretas e `@fs` são bloqueadas; Vite também nega
+esses arquivos. O DM usa a orientação internamente, sem exibir ou ditar o mapa
+aos jogadores. Maré e deslocamento são recursos narrativos, sem cronômetro
+real ou penalidade por dificuldade com inglês.
+
+A direção do ASTRA usa arquivo marítimo, guache, grafite, papel e objetos gastos.
+`public/art/base-assets.json` contém oito assets com IDs, papéis, descrições,
+paths, hashes, modelo, usage disponível e prompts integrais. Os oito assets
+ativos são WebP gerados explicitamente com **Sunburst**, qualidade medium; os
+três objetos têm transparência real. A chapa
+costeira é a referência de estilo global. O worker transmite os arquivos reais
+como `image[]` para `/images/edits`, junto de referências de personagens ou objetos
+já conhecidos; não envia somente seus nomes. Os retratos originais preservam a
+identidade dos personagens, incluindo Emily aos dezesseis anos. A seleção
+prioriza estilo e personagens antes de objetos e cenários, com até quatro
+referências por composição. Os WebP ativos e PNG de origem são versionados;
+cenas de partidas, recibos completos de geração e builds ficam em `data/` e
+`output/`, fora do Git.
+
+O gerador de assets chama a CLI instalada da skill imagegen e exige `uv`, a
+skill e acesso à API. Geração faz chamadas pagas; ativação só deve acontecer
+depois de inspecionar os oito resultados. Saídas existentes são reutilizadas e
+nunca sobrescritas automaticamente:
+
+```bash
+OPENAI_ENV_FILE=/caminho/privado/.env taskctl start --timeout 3600 -- \
+  node --import tsx bin/generate-base-assets.ts --all
+# Depois de conferir as imagens:
+node --import tsx bin/generate-base-assets.ts --activate
+```
+
+`IMAGEGEN_CLI` permite indicar outra instalação da CLI. O modelo Sunburst é
+fixado no gerador; `OPENAI_IMAGE_MODEL` controla apenas as composições da partida.
+
+## Workers, eficiência e banca
+
+O DM usa `dispatch_background({task, contextId:"current"})`; não escreve briefing
+visual nem repete o contexto. O servidor resolve uma cópia imutável dos fatos
+públicos. Ilustração, recap e apoio ao inglês trabalham de forma independente:
+um renderer e até dois helpers por mesa. Helpers usam `OPENAI_WORKER_MODEL`,
+padrão `gpt-5.4-nano`, sem ferramentas para mudar HP, inventário ou capítulos.
+O briefing visual básico é montado por código, sem chamada extra de LLM.
+O mestre de voz continua em Realtime; os resultados chegam ao painel, sem falar
+por cima da narração. O caminho de texto recebe uma resposta estruturada antes
+de despachar workers; não há streaming de despacho antecipado nesse caminho.
+
+Na voz, `response.output_item.done` de uma chamada concluída inicia o trabalho
+antes de `response.done`; call IDs deduplicam o fallback. Resultados especulativos
+aguardam confirmação da resposta antes de publicar. Cancelamento/incompletude
+não executam consequências; interrupção intencional não vira erro do mestre.
+Fila e aplicação dos resultados usam IDs no estado atual, sobrevivendo a clones
+do estado. Restart marca jobs interrompidos, sem repetir chamadas pagas.
+Jobs registram duração, modelo e tokens quando a API os fornece. Não há conversão
+automática para dólar nem promessa de latência geral a partir de uma amostra.
+
+A banca de duas lentes verificou concorrência/cancelamento e roteamento semântico.
+Confirmamos e corrigimos execução de ferramentas após cancelamento, referências
+mutáveis na fila, ausência de abort e limite de imagens reiniciado na RAM.
+Regras, validators, deduplicação e orçamento ficam em código. Jev/Laya podem
+selecionar referências entre candidatos finitos, nunca julgar respostas ou
+conceder descobertas. Uso faturado e custo dos revisores nativos indisponíveis;
+as cadeiras usaram GPT-6.1-Sol/high, e ASTRA implementou a direção artística.
+
+`SYSTEM_ONE_BASE_URL`, `SYSTEM_ONE_MODEL` e `SYSTEM_ONE_API_KEY` configuram a API
+compatível com Jev. Sem URL, a integração fica desligada. Jev: URL
+`https://api.typesafe.ai/v1`, modelo `jev-1.13.0`. Para Laya local já instalado,
+use sua URL `/v1` e modelo `english`; este projeto não instala o serviço.
+`SYSTEM_ONE_SHADOW=true` preserva o fallback; `false` permite escolher um candidato
+válido com confiança >=0,85. Esse limiar é experimental, não garantia de acerto.
+Erro, timeout de 1,2 s, ID fora do conjunto ou baixa confiança preservam as
+referências escolhidas por código. Não colocamos um classificador na frente de
+todo turno. Jev/Laya não foram chamados ao vivo nem calibrados no jogo nesta entrega.
+
+Prova paga restrita dos endpoints novos:
+
+```bash
+node --env-file=.env --import tsx bin/check-workers.ts
+```
+
+Em 2026-10-04, os dois workers começaram concorrentes: ajuda de inglês em
+**2,183 s** (203 input / 54 output tokens), imagem por edits com referências em
+**19,779 s** (6.523 input / 158 output tokens informados), ainda usando as
+referências PNG da primeira direção artística. Evidência em
+`output/verification/workers-live.json`; uma amostra, sem benchmark p50/p95.
+No navegador com RTX 4060, os dois assentos receberam cartões diferentes,
+abriram o primeiro puzzle e o DM real avançou para a rota de maré. Desktop e
+viewport 390 px sem overflow; microfones e celulares físicos continuam sem prova.
+
+Depois do banco Sunburst, uma composição Flare com a chapa de estilo e os três
+retratos terminou em **15,541 s** (5.003 input / 158 output tokens informados).
+Os quatro arquivos e seus hashes estão em
+`output/verification/sunburst-composition.json`. Essa prova testa as referências
+novas; não repete voz ou os helpers já verificados. Para reproduzi-la explicitamente:
+
+```bash
+node --env-file=.env --import tsx bin/check-workers.ts --sunburst-scene
+```
+
+Referências consultadas: [conversas Realtime](https://developers.openai.com/api/docs/guides/realtime-conversations),
+[imagens e referências](https://developers.openai.com/api/docs/guides/image-generation),
+[Flare](https://developers.openai.com/api/docs/models/gpt-image-2.5-flare),
+[Sunburst](https://developers.openai.com/api/docs/models/gpt-image-2.5-sunburst),
+[worker nano](https://developers.openai.com/api/docs/models/gpt-5.4-nano),
+[TypeSafe HTTP](https://docs.typesafe.ai/api),
+[Choice](https://docs.typesafe.ai/primitives/choice) e
+[limites informados pelo autor de Laya](https://github.com/NandhaKishorM/laya#honest-limits).

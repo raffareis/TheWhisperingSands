@@ -98,6 +98,7 @@ test("incapacitated characters cannot attempt checks; rerolls need spare HP", ()
 });
 test("items, clues and chapters change only through validated consequences", () => {
   const s = playing();
+  s.puzzles![0].solved = true;
   applyConsequences(s, {
     ...blank,
     items: [
@@ -150,6 +151,7 @@ test("invalid consequences are rejected without partial health updates", () => {
 test("chapter 5 concludes the adventure and rejects new checks", () => {
   const s = playing();
   s.chapter = 4;
+  s.puzzles![4].solved = true;
   applyConsequences(s, { ...blank, nextChapter: 5 });
   assert.equal(s.phase, "complete");
   assert.throws(() => requestCheck(s, check));

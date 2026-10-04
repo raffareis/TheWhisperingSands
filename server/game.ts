@@ -1,3 +1,4 @@
+import { puzzles } from "./puzzles.js";
 import { randomInt, randomUUID } from "node:crypto";
 import { z } from "zod";
 import type {
@@ -75,7 +76,7 @@ export function initialState(id: string): RoomState {
       "The storm is gone. Your boat is scattered across the sand. Beyond the palms, something waits to be discovered.",
     prompt:
       "Shipwreck debris on a tropical shore after a storm, dawn, sea mist, ancient markings on a tree at the jungle edge. No people, talismans or spirits.",
-    imageUrl: "/art/shipwreck.png",
+    imageUrl: "/art/coastal-field-study-sunburst.webp",
     status: "ready",
   };
   return {
@@ -94,6 +95,13 @@ export function initialState(id: string): RoomState {
     lastRoll: null,
     rollDecision: null,
     preferences: { illustrations: true },
+    puzzles: puzzles.map((p) => ({
+      id: p.id,
+      accepted: [],
+      attempts: 0,
+      hintCount: 0,
+      solved: false,
+    })),
     phase: "lobby",
   };
 }
@@ -279,6 +287,15 @@ export function applyConsequences(state: RoomState, raw: unknown) {
     (value.nextChapter < state.chapter || value.nextChapter > state.chapter + 1)
   )
     throw new Error("Advance only one chapter at a time.");
+  if (
+    value.nextChapter !== null &&
+    value.nextChapter > state.chapter &&
+    state.puzzles &&
+    !state.puzzles[state.chapter]?.solved
+  )
+    throw new Error(
+      "Both players must solve this chapter's evidence puzzle before advancing.",
+    );
   if (
     value.health.some(
       (h, i) =>
