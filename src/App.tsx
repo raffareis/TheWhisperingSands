@@ -105,11 +105,14 @@ export default function App() {
     authenticated: boolean;
   } | null>(null);
   const [recoveryRequest, setRecoveryRequest] = useState(() => {
-    const code = new URLSearchParams(location.hash.slice(1)).get("recover");
+    const hash = new URLSearchParams(location.hash.slice(1));
+    const code = hash.get("seat") ?? hash.get("recover");
     const room =
       new URLSearchParams(location.search).get("room") ??
       new URLSearchParams(location.search).get("id");
-    return code && room ? { code, room } : null;
+    return code && room
+      ? { code, room, kind: hash.has("seat") ? "entry" : "recover" }
+      : null;
   });
   const recoveryRun = useRef<{
     request: string;
@@ -131,7 +134,9 @@ export default function App() {
   const [config, setConfig] = useState<Configuration | null>(null);
   const [connected, setConnected] = useState(false);
   const [error, setError] = useState("");
-  const [busy, setBusy] = useState(false);
+  const [operationBusy, setBusy] = useState(false);
+  const lessonPaused = !!state?.lessonStatus && state.lessonStatus !== "active";
+  const busy = operationBusy || lessonPaused;
   const [name, setName] = useState("");
   const [characterChoice, setCharacterChoice] = useState<"sam" | "liz">("sam");
   const [invite, setInvite] = useState("");
@@ -175,6 +180,7 @@ export default function App() {
   const character = state?.characters.find((c) => c.id === selectedCharacter);
   const companion = state?.players.find((p) => p.id !== credentials?.playerId);
   const dmBusy =
+    lessonPaused ||
     live.dmStatus === "thinking" ||
     live.dmStatus === "speaking" ||
     live.dmStatus === "connecting";
@@ -291,16 +297,20 @@ export default function App() {
     let disposed = false;
     setSeatUnavailable(false);
     setBusy(true);
-    const request = `${recoveryRequest.room}:${recoveryRequest.code}`;
+    const request = `${recoveryRequest.kind}:${recoveryRequest.room}:${recoveryRequest.code}`;
     if (recoveryRun.current?.request !== request) {
       recoveryRun.current = {
         request,
         promise: fetch(
-          `/api/rooms/${encodeURIComponent(recoveryRequest.room)}/recover`,
+          `/api/rooms/${encodeURIComponent(recoveryRequest.room)}/${recoveryRequest.kind}`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ recoveryCode: recoveryRequest.code }),
+            body: JSON.stringify(
+              recoveryRequest.kind === "entry"
+                ? { seatCode: recoveryRequest.code }
+                : { recoveryCode: recoveryRequest.code },
+            ),
           },
         ).then(async (response) => {
           const value = await response.json();
@@ -525,6 +535,10 @@ export default function App() {
     socket.current.send(JSON.stringify(value));
   }
   async function perform(action: () => Promise<unknown>) {
+    if (lessonPaused) {
+      setError("Your lesson is paused. Ask your teacher to reopen it.");
+      return;
+    }
     setBusy(true);
     setError("");
     try {
@@ -937,6 +951,19 @@ export default function App() {
           </button>
         </div>
       </header>
+      {lessonPaused && (
+        <section className="lesson-pause-banner" role="status">
+          <strong>
+            {state.lessonStatus === "archived"
+              ? "This adventure is archived."
+              : "Your lesson is paused."}
+          </strong>
+          <p>
+            Your discoveries, objects and journal are saved. You can review them
+            now; your teacher will reopen the table when it is time to continue.
+          </p>
+        </section>
+      )}
       <main className="table-grid">
         <aside className="character-panel">
           <div className="panel-title">

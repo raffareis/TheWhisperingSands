@@ -13,7 +13,9 @@ export function PuzzlePanel({
 }) {
   const [answer, setAnswer] = useState("");
   const [message, setMessage] = useState("");
-  const [busy, setBusy] = useState(false);
+  const [requestBusy, setBusy] = useState(false);
+  const lessonPaused = !!room.lessonStatus && room.lessonStatus !== "active";
+  const busy = requestBusy || lessonPaused;
   const p = room.puzzleView;
   useEffect(() => {
     setAnswer("");
@@ -25,6 +27,7 @@ export function PuzzlePanel({
   )?.characterId;
   const accepted = !!character && p.accepted.includes(character);
   async function send(route: string, value: unknown) {
+    if (lessonPaused) return;
     setBusy(true);
     setMessage("");
     try {

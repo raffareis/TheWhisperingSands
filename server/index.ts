@@ -13,6 +13,11 @@ import { RoomRuntime, socketMessage, type Settings } from "./runtime.js";
 import { projectRoom } from "./puzzles.js";
 import { rollCheck, rerollCheck, acceptRoll } from "./game.js";
 import { HostAccess } from "./host-access.js";
+import {
+  TeachingDesk,
+  lessonCreateSchema,
+  lessonUpdateSchema,
+} from "./teaching.js";
 import { kleinModel } from "./image-edits.js";
 import { loadFalEnv } from "./load-env.js";
 if (existsSync(".env")) process.loadEnvFile(".env");
@@ -42,6 +47,9 @@ const settings: Settings = {
   dataDir: resolve(process.env.DATA_DIR ?? "data"),
 };
 const store = new RoomStore(settings.dataDir);
+const teaching = process.env.HOST_ACCESS_KEY
+  ? new TeachingDesk(store, process.env.HOST_ACCESS_KEY)
+  : null;
 const rooms = new Map<string, RoomRuntime>();
 function runtime(id: string) {
   let room = rooms.get(id);
@@ -120,12 +128,66 @@ const server = createServer(async (req, res) => {
           required: hostAccess.required,
           authenticated: hostAccess.authenticated(req),
         });
+      if (req.method === "POST" && url.pathname === "/api/host-access/logout") {
+        res.setHeader(
+          "Set-Cookie",
+          `whispering_host=; HttpOnly; SameSite=Strict; Path=/api; Max-Age=0${req.headers["x-forwarded-proto"] === "https" ? "; Secure" : ""}`,
+        );
+        return json(res, { ok: true });
+      }
       if (req.method === "POST" && url.pathname === "/api/host-access") {
         const { key } = z
           .object({ key: z.string().min(1).max(300) })
           .parse(await body(req));
         hostAccess.grant(req, res, key);
         return json(res, { ok: true });
+      }
+      if (
+        url.pathname === "/api/teaching" ||
+        url.pathname.startsWith("/api/teaching/")
+      ) {
+        if (!hostAccess.required || !teaching)
+          throw new GameError(
+            "Configure private host access to use the teacher desk.",
+            503,
+          );
+        if (!hostAccess.authenticated(req))
+          throw new GameError("Teacher access is required.", 403);
+        if (url.pathname === "/api/teaching") {
+          if (req.method === "GET")
+            return json(res, { tables: teaching.list() });
+          if (req.method === "POST") {
+            const table = teaching.create(
+              lessonCreateSchema.parse(await body(req)),
+            );
+            const room = runtime(table.id);
+            room.syncLessonStatus(table.status);
+            return json(res, { table }, 201);
+          }
+        }
+        const target = url.pathname.match(
+          /^\/api\/teaching\/([a-z0-9_-]{4,20})(?:\/(links))?$/,
+        );
+        if (!target || req.method !== "POST")
+          throw new GameError("Not found.", 404);
+        const id = target[1];
+        teaching.get(id);
+        const room = runtime(id);
+        if (target[2] === "links") {
+          const { character } = z
+            .object({ character: z.enum(["sam", "liz"]) })
+            .strict()
+            .parse(await body(req));
+          const rotated = teaching.rotate(id, character);
+          room.revokeSeat(rotated.playerId);
+          return json(res, { table: rotated.table });
+        }
+        const value = lessonUpdateSchema.parse(await body(req));
+        if (value.status && value.status !== "active")
+          room.assertCanPauseLesson();
+        const table = teaching.update(id, value);
+        if (value.status) room.syncLessonStatus(table.status);
+        return json(res, { table });
       }
       if (req.method === "POST" && url.pathname === "/api/rooms") {
         if (hostAccess.required && !hostAccess.authenticated(req))
@@ -172,6 +234,26 @@ const server = createServer(async (req, res) => {
           },
           201,
         );
+      }
+      if (req.method === "POST" && route === "entry") {
+        if (!teaching)
+          throw new GameError("Student links are unavailable.", 503);
+        const { seatCode } = z
+          .object({ seatCode: z.string().regex(/^[A-Za-z0-9_-]{43}$/) })
+          .strict()
+          .parse(await body(req));
+        const entered = teaching.enter(id, seatCode),
+          room = runtime(id);
+        room.revokeSeat(entered.credentials.playerId);
+        return json(res, {
+          credentials: entered.credentials,
+          state: projectRoom(
+            room.state,
+            entered.state.players.find(
+              (p) => p.id === entered.credentials.playerId,
+            )!,
+          ),
+        });
       }
       if (req.method === "POST" && route === "recover") {
         const { recoveryCode } = z
@@ -223,6 +305,7 @@ const server = createServer(async (req, res) => {
       }
       if (req.method !== "POST") throw new GameError("Not found.", 404);
       const value = await body(req);
+      if (!["recovery", "invite"].includes(route)) room.assertLessonActive();
       if (route === "party-chat")
         return json(res, room.partyChat(player, value));
       if (route === "recovery") {
@@ -321,7 +404,13 @@ const server = createServer(async (req, res) => {
     }
     if (vite) {
       if (
-        ["/", "/whispering-sands", "/whispering-sands/"].includes(url.pathname)
+        [
+          "/",
+          "/teacher",
+          "/teacher/",
+          "/whispering-sands",
+          "/whispering-sands/",
+        ].includes(url.pathname)
       )
         req.url = "/index.html" + url.search;
       vite.middlewares(req, res, (error?: unknown) => {
@@ -338,9 +427,13 @@ const server = createServer(async (req, res) => {
     if (path !== root && !path.startsWith(root + "/"))
       throw new GameError("Not found.", 404);
     // Only the catalogue root and game entry route serve the SPA shell.
-    const target = ["/", "/whispering-sands", "/whispering-sands/"].includes(
-      url.pathname,
-    )
+    const target = [
+      "/",
+      "/teacher",
+      "/teacher/",
+      "/whispering-sands",
+      "/whispering-sands/",
+    ].includes(url.pathname)
       ? resolve(root, "index.html")
       : path;
     if (
@@ -441,6 +534,8 @@ server.on("upgrade", (req, socket, head) => {
           throw new GameError("This seat connection has been replaced.", 401);
         const event = socketMessage.parse(value);
         const player = room.state.players.find((p) => p.id === playerId)!;
+        if (!["voice_stop", "party_end", "floor_end"].includes(event.type))
+          room.assertLessonActive();
         if (event.type === "party_start") room.beginPartyFloor(player);
         if (event.type === "party_end") room.endPartyFloor(player.id);
         if (event.type === "party_audio")

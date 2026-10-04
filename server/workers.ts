@@ -200,6 +200,8 @@ export class BackgroundWorkers {
     if (callId && this.callJobs.has(callId))
       return { jobId: this.callJobs.get(callId), status: "queued" };
     const s = this.state();
+    if (s.lessonStatus && s.lessonStatus !== "active")
+      throw new Error("This lesson is paused.");
     if (contextId !== "current" && contextId !== this.contextId())
       throw new Error(
         "Context is stale; use current or the current context ID.",
@@ -292,6 +294,18 @@ export class BackgroundWorkers {
       this.patch(this.pendingImage.job.id, { status: "superseded" });
       this.pendingImage = null;
     }
+    this.publish();
+  }
+  pauseAll() {
+    for (const approval of this.approvals.values()) approval.resolve(false);
+    this.approvals.clear();
+    for (const a of this.active.values()) {
+      this.patch(a.job.id, { status: "superseded" });
+      a.controller.abort();
+    }
+    if (this.pendingImage)
+      this.patch(this.pendingImage.job.id, { status: "superseded" });
+    this.pendingImage = null;
     this.publish();
   }
   close() {

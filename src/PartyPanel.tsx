@@ -23,7 +23,9 @@ export function PartyPanel({
   voice: PartyVoice;
 }) {
   const [text, setText] = useState("");
-  const [busy, setBusy] = useState(false);
+  const [requestBusy, setBusy] = useState(false);
+  const lessonPaused = !!room.lessonStatus && room.lessonStatus !== "active";
+  const busy = requestBusy || lessonPaused;
   const [error, setError] = useState("");
   const messages = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -160,7 +162,11 @@ export function PartyPanel({
             onClick={voice.talk}
             disabled={
               !voice.talking &&
-              (voice.blocked || !!voice.speaker || !connected || voice.loading)
+              (voice.blocked ||
+                lessonPaused ||
+                !!voice.speaker ||
+                !connected ||
+                voice.loading)
             }
             aria-pressed={voice.talking}
           >

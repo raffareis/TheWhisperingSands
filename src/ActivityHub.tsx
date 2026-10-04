@@ -16,8 +16,8 @@ export default function ActivityHub() {
             Meg’s classroom<small>ENGLISH ACTIVITIES</small>
           </span>
         </a>
-        <a className="hub-navigation" href="#activities">
-          Explore activities <ArrowUpRight size={16} />
+        <a className="hub-navigation" href="/teacher">
+          Teacher desk <ArrowUpRight size={16} />
         </a>
       </header>
       <main>
@@ -85,7 +85,8 @@ export default function ActivityHub() {
                   Open the adventure <ArrowUpRight size={19} />
                 </a>
                 <small className="hub-invitation">
-                  One person hosts. Their partner joins by private invitation.
+                  Play with a partner. Teachers can organise pairs in the
+                  Teacher desk.
                 </small>
               </div>
             </article>

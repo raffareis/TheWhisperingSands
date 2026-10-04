@@ -133,6 +133,29 @@ export class RoomRuntime {
     )
       this.store.save(this.state);
   }
+  assertLessonActive() {
+    if (this.state.lessonStatus && this.state.lessonStatus !== "active")
+      throw new GameError(
+        "This lesson is paused. Your teacher can reopen it; your progress is saved.",
+        409,
+      );
+  }
+  assertCanPauseLesson() {
+    if (this.thinking)
+      throw new GameError(
+        "Wait for the storyteller's text turn to finish before pausing the lesson.",
+        409,
+      );
+  }
+  syncLessonStatus(status: NonNullable<RoomState["lessonStatus"]>) {
+    this.state.lessonStatus = status;
+    if (status !== "active") {
+      if (this.live.partySpeaker) this.endPartyFloor(this.live.partySpeaker);
+      this.stopVoice();
+      this.workers.pauseAll();
+    }
+    this.publish();
+  }
   config(): Configuration {
     return {
       aiAvailable: !!this.settings.key,
@@ -319,6 +342,7 @@ export class RoomRuntime {
     }
   }
   private requireAI() {
+    this.assertLessonActive();
     if (!this.settings.key)
       throw new GameError(
         "The storyteller needs an OpenAI API key on the server.",
@@ -326,6 +350,7 @@ export class RoomRuntime {
       );
   }
   private assertTurn() {
+    this.assertLessonActive();
     if (this.state.phase === "lobby")
       throw new GameError("Start the adventure first.");
     if (this.state.phase === "complete")

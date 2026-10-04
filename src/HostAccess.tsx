@@ -29,7 +29,7 @@ export function HostAccess({
       history.replaceState(
         null,
         "",
-        `/whispering-sands${location.search}${hash.size ? `#${hash}` : ""}`,
+        `${location.pathname.startsWith("/teacher") ? "/teacher" : "/whispering-sands"}${location.search}${hash.size ? `#${hash}` : ""}`,
       );
       onReady();
     } catch (e) {
@@ -46,8 +46,8 @@ export function HostAccess({
     <section className="host-access" aria-labelledby="host-access-title">
       <h3 id="host-access-title">Host access</h3>
       <p>
-        Enter your private host code to create a table. Players with an
-        invitation or return link can join directly.
+        Enter your private host code to manage classes and create tables.
+        Players with an invitation or return link can join directly.
       </p>
       <form onSubmit={submit}>
         <label htmlFor="host-code">Host code</label>

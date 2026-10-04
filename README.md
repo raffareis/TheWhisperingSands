@@ -124,6 +124,43 @@ A retomada limpa os IDs de áudio da sessão anterior; a regressão integra os
 68 testes. Evidência privada: `output/verification/public-voice-reopen.json`.
 A entrega e os achados ASTRA são registrados em #6 e #5.
 
+## Aulas e duplas
+
+`/teacher` é o painel privado da Meg, usando o mesmo acesso de anfitrião.
+**New pair** cria dois assentos reservados sem colocar a professora no jogo.
+Dê um nome à aventura e à turma; identifique quem joga como Sam e como Liz.
+Copie e envie a cada aluno seu link individual. Não envie o link de professora.
+
+Cada dupla mantém a mesma mesa entre aulas: personagens, inventário, aceites
+parciais, pistas, hints e diário ficam no SQLite. O link individual não tem
+expiração semanal e funciona em um navegador novo. Ao abri-lo, o servidor
+substitui as credenciais antigas daquele aluno, preservando seu personagem.
+**Replace a lost or shared link** revoga o link anterior e o assento salvo;
+entregue somente o substituto. Recuperações de 15 minutos continuam disponíveis
+no jogo e não invalidam o link permanente da aula.
+
+Ao terminar, registre **Private teaching notes**, escolha **Next lesson** e use
+**End this lesson · pause**. A pausa fecha os microfones e cancela trabalho de
+background pendente; não envia novos turnos, respostas ou hints. Um turno de
+texto já em andamento precisa terminar antes da pausa. Cancelamento não garante
+estorno de geração já enviada ao provedor. Os alunos podem rever seu material.
+Na aula seguinte, escolha a dupla e **Reopen for next lesson**. Continuem usando
+os mesmos links; os jogadores habilitam novamente a voz quando quiserem.
+
+O painel mostra turma, próxima data, puzzles resolvidos, hints, tentativas e a
+última narração. Notas da professora ficam fora do estado dos jogadores e dos
+prompts da IA. Filtre por turma/nome; **Archive adventure** conserva a partida
+para consulta e permite reabri-la. **Lock desk** encerra o acesso de professora
+naquele navegador. **Bring an existing adventure** importa uma mesa com dois
+jogadores pelo código `room=` de sua URL, preservando nomes e progresso.
+
+Os códigos individuais são armazenados como hashes e também cifrados para que
+a professora possa copiar seus links novamente. A cifra usa HOST_ACCESS_KEY;
+preserve essa configuração privada junto do banco entre releases. A migração
+adiciona tabelas sem alterar as partidas antigas. Gestão e prova: #7.
+`bin/check-teaching.ts` verifica o fluxo HTTP/WS sem chamadas de IA; use uma
+chave privada, `APP_URL` e `TEACHING_REPORT` para checkpoints separados.
+
 ## Estado e regras
 
 - Uma sessão Realtime por mesa. Um jogador fala por vez; PCM mono de 24 kHz é
@@ -161,7 +198,7 @@ npm run build
 npm run format:check
 ```
 
-Os 68 testes verificam regras, autorização das rolagens, decisão e custo de nova
+Os 73 testes verificam regras, autorização das rolagens, decisão e custo de nova
 tentativa, consequências, persistência, isolamento de salas, transporte HTTP e
 WebSocket, sessão Realtime compartilhada, execução de ferramentas e atribuição de
 transcrições que chegam fora de ordem, conversa sem IA, recuperação/revogação

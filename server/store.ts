@@ -29,13 +29,22 @@ export class RoomStore {
     this.db.exec(
       "PRAGMA journal_mode=WAL; CREATE TABLE IF NOT EXISTS rooms(id TEXT PRIMARY KEY, state TEXT NOT NULL, invite_hash TEXT NOT NULL); CREATE TABLE IF NOT EXISTS seats(token_hash TEXT PRIMARY KEY,room_id TEXT NOT NULL,player_id TEXT NOT NULL); CREATE TABLE IF NOT EXISTS worker_attempts(room_id TEXT NOT NULL,task TEXT NOT NULL,at INTEGER NOT NULL); CREATE INDEX IF NOT EXISTS worker_attempts_at ON worker_attempts(at); CREATE TABLE IF NOT EXISTS recovery_codes(code_hash TEXT PRIMARY KEY,room_id TEXT NOT NULL,player_id TEXT NOT NULL,expires_at INTEGER NOT NULL);",
     );
+    this.db.exec(
+      "CREATE TABLE IF NOT EXISTS classroom_tables(room_id TEXT PRIMARY KEY,details TEXT NOT NULL,status TEXT NOT NULL,created_at TEXT NOT NULL,updated_at TEXT NOT NULL,sealed_links TEXT NOT NULL); CREATE TABLE IF NOT EXISTS classroom_entries(code_hash TEXT PRIMARY KEY,room_id TEXT NOT NULL,player_id TEXT NOT NULL); CREATE UNIQUE INDEX IF NOT EXISTS classroom_entry_player ON classroom_entries(room_id,player_id);",
+    );
   }
   load(id: string): RoomState {
     const row = this.db
       .prepare("SELECT state FROM rooms WHERE id=?")
       .get(id) as { state: string } | undefined;
     if (!row) throw new GameError("This adventure could not be found.", 404);
-    return JSON.parse(row.state);
+    const state: RoomState = JSON.parse(row.state);
+    const lesson = this.db
+      .prepare("SELECT status FROM classroom_tables WHERE room_id=?")
+      .get(id) as
+      { status: NonNullable<RoomState["lessonStatus"]> } | undefined;
+    if (lesson) state.lessonStatus = lesson.status;
+    return state;
   }
   save(state: RoomState) {
     state.revision++;

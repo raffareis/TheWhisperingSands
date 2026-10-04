@@ -62,6 +62,7 @@ export interface Scene {
   editDepth?: number;
 }
 export interface RoomState {
+  lessonStatus?: import("./teaching").LessonStatus;
   id: string;
   revision: number;
   createdAt: string;

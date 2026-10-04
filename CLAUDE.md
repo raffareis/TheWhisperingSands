@@ -5,7 +5,9 @@ Escopo inicial: [#1](https://github.com/raffareis/TheWhisperingSands/issues/1). 
 O README documenta execução, regras e limites observados. O portal da Meg fica
 em meg.raffareis.com; a atividade RPG tem rota /whispering-sands. Catálogo público
 em shared/activities.ts, sem fontes da campanha ou atividades fictícias.
-Entrega jogável e publicação: #6; achados ASTRA: #5.
+Entrega jogável e publicação: #6; achados ASTRA: #5. Gestão de aulas/duplas: #7.
+Teacher desk em /teacher, privado, com turmas/notas/pausa/retomada e links
+permanentes por aluno. A professora não ocupa um assento.
 
 ## Fontes e estrutura
 
@@ -23,6 +25,9 @@ Entrega jogável e publicação: #6; achados ASTRA: #5.
   por link de 15 minutos, uso único, com revogação do token anterior.
 - `server/host-access.ts`: criação de mesas restrita pelo código privado,
   cookie HttpOnly assinado e vinculado ao host. Não versionar HOST_ACCESS_KEY.
+- `server/teaching.ts`: metadata privada da professora; links permanentes hash
+  e AES-GCM usando HOST_ACCESS_KEY, independentes dos tokens de assento.
+  Notas nunca entram em RoomState ou prompts. Preservar chave e DB nas releases.
 - `server/runtime.ts`: uma sessão Realtime por sala, tools, voz e fila de imagens.
 - `server/index.ts`: HTTP, WebSocket, assets de produção e cleanup de processos.
 - `shared/types.ts`: estado público e view do próprio assento; projeção HTTP/WS
@@ -91,3 +96,8 @@ bin/check-playable-live.ts. O texto usa GPT-4.1 e a voz usa gpt-realtime-2.1.
 FAL_ENV_FILE carrega somente FAL_KEY: arquivos mistos da CLI de mídia também
 trazem OPENAI_API_KEY de outro projeto; passar o arquivo inteiro como --env-file
 pode trocar a credencial do mestre e causar quota zero. Não repetir essa carga.
+
+Lesson status é metadado autoritativo carregado do SQLite e projetado como
+lessonStatus. Pausa/arquivo fecham voz e workers; HTTP/WS recusam turnos.
+Retorno por #seat usa /entry e revoga somente a credencial daquele aluno;
+#recover continua sendo uso único/15 min. bin/check-teaching.ts não chama IA.

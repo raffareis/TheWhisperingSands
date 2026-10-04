@@ -287,6 +287,7 @@ test(
       room.state.chapter = 4;
       room.state.puzzles![4].solved = true;
       room.state.preferences.illustrations = false;
+      const rescueMessageStart = incoming.length;
       await room.action(a, "We confront the keeper and board the ferry.");
       emit({ type: "response.created", response: { id: "rescue" } });
       emit({
@@ -319,13 +320,25 @@ test(
         choice: "confront",
         rescued: true,
       });
-      await until(
-        () =>
-          incoming.at(-2)?.type === "session.update" &&
-          incoming.at(-1)?.type === "response.create",
+      // The previous action also ends in update + response.create; wait for
+      // the context resulting from this rescue, not that earlier pair.
+      await until(() =>
+        incoming
+          .slice(rescueMessageStart)
+          .some(
+            (e) =>
+              e.type === "session.update" &&
+              e.session.instructions.includes('"rescued":true'),
+          ),
       );
       assert.ok(
-        incoming.at(-2).session.instructions.includes('"rescued":true'),
+        incoming
+          .slice(rescueMessageStart)
+          .some(
+            (e) =>
+              e.type === "session.update" &&
+              e.session.instructions.includes('"rescued":true'),
+          ),
       );
     } finally {
       room.close();
