@@ -1,6 +1,10 @@
 # The Whispering Sands
 
 App de RPG compartilhado para Rafael e Meg; interface e jogo inteiramente em inglês.
+Coordenação do portal e documentação de retomada em
+[Meg Classroom](https://github.com/raffareis/meg-classroom), que inclui este repo
+como submódulo `activities/whispering-sands`. Portal/painel/runtime ainda são
+implementados aqui; o repo coordenador não tem um segundo servidor ou banco.
 Escopo inicial: [#1](https://github.com/raffareis/TheWhisperingSands/issues/1). Revamp autorizado: [#2](https://github.com/raffareis/TheWhisperingSands/issues/2).
 O README documenta execução, regras e limites observados. O portal da Meg fica
 em meg.raffareis.com; a atividade RPG tem rota /whispering-sands. Catálogo público

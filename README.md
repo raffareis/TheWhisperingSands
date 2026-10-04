@@ -1,5 +1,11 @@
 # The Whispering Sands
 
+Esta atividade integra o repo coordenador
+[Meg Classroom](https://github.com/raffareis/meg-classroom), como submódulo
+`activities/whispering-sands`. Contexto de continuidade, operação e tutorial
+do portal são rastreados lá. O app deste repo ainda serve catálogo, painel
+da professora e RPG; não houve extração do runtime nesta organização.
+
 Uma mesa de RPG para **Rafael e Meg e duplas de alunos**, cada um no próprio celular ou computador,
 inteiramente em inglês. A história escrita para uma aula de inglês virou uma
 aventura compartilhada: um mestre por voz, cenas ilustradas durante a partida,
