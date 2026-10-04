@@ -519,3 +519,76 @@ test("structured text rescue commits the same authoritative ending and public ep
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test("reenabling voice cannot truncate an item from the previous provider session", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "whispering-rt-reopen-"));
+  const store = new RoomStore(dir);
+  const provider = new WebSocketServer({ port: 0 });
+  await once(provider, "listening");
+  const created = store.create("Sam", "sam");
+  const incoming: { connection: number; event: any }[] = [];
+  let connection = 0;
+  let current: WebSocket;
+  provider.on("connection", (ws) => {
+    current = ws;
+    const id = ++connection;
+    ws.on("message", (raw) => {
+      const event = JSON.parse(raw.toString());
+      incoming.push({ connection: id, event });
+      if (event.type === "session.update")
+        ws.send(JSON.stringify({ type: "session.updated" }));
+    });
+  });
+  const room = new RoomRuntime(
+    store,
+    created.state.id,
+    {
+      key: "test-key",
+      textModel: "test-text",
+      realtimeModel: "test-realtime",
+      imageModel: "test-image",
+      dataDir: dir,
+    },
+    () =>
+      new WebSocket(
+        `ws://127.0.0.1:${(provider.address() as { port: number }).port}`,
+      ),
+  );
+  room.state.phase = "playing";
+  const player = room.state.players[0];
+  try {
+    await room.startVoice(player);
+    current!.send(
+      JSON.stringify({
+        type: "response.output_audio.delta",
+        item_id: "old-session-item",
+        delta: Buffer.alloc(4800).toString("base64"),
+      }),
+    );
+    await until(() => room.live.dmStatus === "speaking");
+    room.stopVoice();
+    await room.startVoice(player);
+    room.beginFloor(player);
+    await until(() =>
+      incoming.some(
+        (e) =>
+          e.connection === 2 && e.event.type === "input_audio_buffer.clear",
+      ),
+    );
+    assert.ok(
+      !incoming.some(
+        (e) =>
+          e.connection === 2 && e.event.type === "conversation.item.truncate",
+      ),
+    );
+    assert.equal(room.live.speaker, player.id);
+    room.releaseFloor(player.id, false);
+    assert.equal(room.live.dmStatus, "ready");
+  } finally {
+    room.close();
+    for (const ws of provider.clients) ws.close();
+    await new Promise<void>((resolve) => provider.close(() => resolve()));
+    store.close();
+    rmSync(dir, { recursive: true, force: true });
+  }
+});

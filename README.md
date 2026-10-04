@@ -104,13 +104,19 @@ imprime os comandos de ativação; não promove uma release com build pendente.
 ssh marvin-dell taskctl wait ID_DEVOLVIDO
 # Depois do build verde, use o comando de symlink impresso por bin/deploy-meg.
 publicar-app servico meg 4317 /home/marvin/apps/meg/current -- \
-  'NODE_ENV=production OPENAI_ENV_FILE=/home/marvin/.config/whispering-sands/server.env ./bin/dev'
+  'env NODE_ENV=production OPENAI_ENV_FILE=/home/marvin/.config/whispering-sands/server.env ./bin/dev'
 PUBLICAR_DOMINIO=raffareis.com publicar-app publicar meg 4317
 ```
 
 A prova `bin/check-public.ts` verifica HTTPS, criação restrita, convite,
 WebSocket da dupla, recuperação/revogação e negação das fontes privadas, sem
 invocar IA. Carregue o arquivo privado de anfitrião e configure `APP_URL`.
+
+A publicação em `https://meg.raffareis.com` foi ativada em 2026-10-04.
+A prova pública confirmou dois clientes WebSocket, convite sem código de anfitrião,
+áudio direto entre os assentos, recuperação com revogação e sete fontes privadas
+negadas. Catálogo, acesso privado do anfitrião e mesa em viewport de 390 px foram
+inspecionados com NVIDIA GeForce RTX 4060, sem overflow horizontal.
 
 ## Estado e regras
 
@@ -149,7 +155,7 @@ npm run build
 npm run format:check
 ```
 
-Os 67 testes verificam regras, autorização das rolagens, decisão e custo de nova
+Os 68 testes verificam regras, autorização das rolagens, decisão e custo de nova
 tentativa, consequências, persistência, isolamento de salas, transporte HTTP e
 WebSocket, sessão Realtime compartilhada, execução de ferramentas e atribuição de
 transcrições que chegam fora de ordem, conversa sem IA, recuperação/revogação

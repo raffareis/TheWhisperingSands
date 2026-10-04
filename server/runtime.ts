@@ -528,6 +528,8 @@ export class RoomRuntime {
         }),
       );
       ws.on("message", (raw) => {
+        // A closed session may still deliver queued events after a new one starts.
+        if (this.realtime !== ws) return;
         let event: Record<string, unknown>;
         try {
           event = JSON.parse(raw.toString());
@@ -556,6 +558,7 @@ export class RoomRuntime {
         this.onRealtime(event);
       });
       ws.on("error", (error) => {
+        if (this.realtime !== ws) return;
         clearTimeout(timer);
         if (!settled) {
           settled = true;
@@ -570,16 +573,7 @@ export class RoomRuntime {
           reject(new Error("Voice connection closed before it was ready."));
         }
         if (this.realtime === ws) {
-          this.realtime = null;
-          this.replyActive = false;
-          this.currentResponseId = null;
-          if (this.floorTimer) clearTimeout(this.floorTimer);
-          this.floorTimer = null;
-          this.audioBytes = 0;
-          this.live.speaker = null;
-          this.live.dmStatus = "offline";
-          this.broadcast({ type: "voice_closed" });
-          this.publish(false);
+          this.stopVoice();
         }
       });
     });
@@ -1002,6 +996,9 @@ export class RoomRuntime {
     this.earlyCalls.clear();
     this.replyActive = false;
     this.currentResponseId = null;
+    this.lastOutput = null;
+    this.audioBytes = 0;
+    this.toolRounds = 0;
     this.speakerCommits = [];
     this.committedSpeakers.clear();
     this.live.dmStatus = "offline";
