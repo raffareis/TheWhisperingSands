@@ -1263,8 +1263,14 @@ export default function App() {
                       )
                     }
                   >
-                    {busy ? (
+                    {operationBusy ? (
                       <LoaderCircle size={17} className="spin" />
+                    ) : lessonPaused ? (
+                      state.lessonStatus === "archived" ? (
+                        "Adventure archived"
+                      ) : (
+                        "Lesson paused"
+                      )
                     ) : (
                       <>
                         Begin adventure
