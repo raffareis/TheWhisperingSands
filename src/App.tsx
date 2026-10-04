@@ -2,14 +2,14 @@ import {
   useState,
   useEffect,
   useRef,
+  type CSSProperties,
   type FormEvent,
   type ReactNode,
 } from "react";
 import {
   Compass,
+  ArrowLeft,
   ArrowRight,
-  Wind,
-  BookOpen,
   Heart,
   Shield,
   Brain,
@@ -23,7 +23,6 @@ import {
   Copy,
   Send,
   Dices,
-  Sparkles,
   MapPin,
   ChevronRight,
   ScrollText,
@@ -36,6 +35,9 @@ import {
   Sunrise,
   LoaderCircle,
   LogOut,
+  Maximize2,
+  MessageCircle,
+  Pause,
 } from "lucide-react";
 import type {
   RoomState,
@@ -60,6 +62,7 @@ const emptyLive: LiveState = {
   presence: [],
 };
 const statIcons = { STR: Shield, INT: Brain, SUR: Trees };
+const statNames = { STR: "Strength", INT: "Intelligence", SUR: "Survival" };
 function stored(): Credentials | null {
   try {
     const c = JSON.parse(localStorage.getItem("whispering-seat") ?? "null");
@@ -593,6 +596,7 @@ export default function App() {
     }
   }
   async function toggleVoice() {
+    if (lessonPaused && !voiceEnabled) return;
     const session = audioSession.current;
     try {
       if (voiceEnabled) {
@@ -726,57 +730,56 @@ export default function App() {
         state.scene,
       ].slice(-5)
     : [];
+  const needsHostAccess =
+    !joining &&
+    ((config?.hostAccessRequired && !hostAccess?.authenticated) ||
+      (hostAccess?.required && !hostAccess.authenticated) ||
+      (!hostAccess?.authenticated &&
+        !!new URLSearchParams(location.hash.slice(1)).get("host")));
   if (!state || joining || recoveryRequest)
     return (
       <div className="welcome">
         <header className="welcome-header">
           <Brand />
           <a className="all-activities" href="/">
-            All activities
+            <ArrowLeft size={15} />
+            <span>All activities</span>
           </a>
-          <span className="small-caps">An island mystery · for two</span>
         </header>
         <main className="welcome-layout">
           <section className="welcome-copy">
-            <div className="eyebrow">
-              <span />A cooperative island adventure
-            </div>
             <h1>
-              Washed ashore.
-              <br />
-              <em>Not alone.</em>
+              Washed ashore. <em>Not alone.</em>
             </h1>
             <p>
-              A storm. An uncharted island.
-              <br />
-              Search together. Read the evidence. Find a way home.
+              A cooperative island mystery for two players. Each of you holds a
+              different record; compare them in English to find a way home.
             </p>
             <figure className="arrival-plate">
               <img
                 src="/art/coastal-field-study-sunburst.webp"
                 alt="A storm-torn boat on the shore of a misty island, with carved markings at the forest edge."
               />
-              <figcaption>
-                <span>PLATE 01</span> The shore after the storm{" "}
-                <span>THE WHISPERING SANDS</span>
-              </figcaption>
             </figure>
-            <div className="chapter-hint">
-              <span>01 / THE SHIPWRECK</span>
-              <div />
-              <Wind size={19} />
-            </div>
           </section>
           <section className="entry-card">
-            <Compass size={31} className="gold" />
-            <span className="eyebrow">
-              {joining ? "YOUR PLACE AT THE TABLE" : "EXPEDITION REGISTER"}
-            </span>
-            <h2>{joining ? "A companion is waiting." : "Who are you?"}</h2>
+            <h2>
+              {joining
+                ? "A companion is waiting."
+                : recoveryRequest || credentials
+                  ? "Return to your adventure"
+                  : needsHostAccess
+                    ? "Teacher access"
+                    : "Who are you?"}
+            </h2>
             <p>
               {joining
                 ? "Join the same island, the same choices, the same storyteller."
-                : "Choose a character, then invite your companion to take the other seat."}
+                : recoveryRequest || credentials
+                  ? "Your discoveries stay with your table."
+                  : needsHostAccess
+                    ? "Open your private access to create an adventure. Students join with the links their teacher sends."
+                    : "Choose a character, then invite your companion to take the other seat."}
             </p>
             {recoveryRequest ? (
               <div className="saved-adventures">
@@ -810,13 +813,7 @@ export default function App() {
                   Back to entrance · keep saved adventure
                 </button>
               </div>
-            ) : !joining &&
-              ((config?.hostAccessRequired && !hostAccess?.authenticated) ||
-                (hostAccess?.required && !hostAccess.authenticated) ||
-                (!hostAccess?.authenticated &&
-                  !!new URLSearchParams(location.hash.slice(1)).get(
-                    "host",
-                  ))) ? (
+            ) : needsHostAccess ? (
               <HostAccess
                 busy={hostBusy}
                 onReady={() => {
@@ -907,33 +904,75 @@ export default function App() {
                   ))}
                 </section>
               )}
-            <div className="entry-foot">
-              <Heart size={14} />
-              <span>Two players · shared clues · one persistent story</span>
-            </div>
           </section>
         </main>
         <footer className="welcome-footer">
-          <span>THE WHISPERING SANDS</span>
-          <span>Inspired by a story made for English class.</span>
+          Inspired by a story made for English class.
         </footer>
         {error && <Toast text={error} close={() => setError("")} />}
       </div>
     );
+  const chapterNumber = Math.min(state.chapter + 1, 5);
+  const online = (playerId?: string) =>
+    live.presence.some((x) => x.playerId === playerId && x.online);
+  const checkCharacter = state.pendingCheck
+    ? state.characters.find((c) => c.id === state.pendingCheck!.characterId)
+    : undefined;
+  const rollCharacter = state.lastRoll
+    ? state.characters.find((c) => c.id === state.lastRoll!.characterId)
+    : undefined;
+  const ownCharacter = state.characters.find(
+    (c) => c.id === player?.characterId,
+  );
+  const sceneStatus = listening
+    ? "Your turn — speak to the storyteller."
+    : live.speaker
+      ? `${state.players.find((p) => p.id === live.speaker)?.name} is speaking…`
+      : statusText[live.dmStatus];
+  function jump(id: string) {
+    document
+      .getElementById(id)
+      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
   return (
     <div className="table-shell">
       <header className="table-header">
         <Brand />
-        <a className="all-activities" href="/">
-          All activities
-        </a>
-        <div className="header-middle">
-          <span className="connection-dot" data-online={connected} />
-          <span>{connected ? "Your shared table" : "Reconnecting…"}</span>
-          <span className="header-divider" />
-          <span className="small-caps">{state.chapterTitle}</span>
+        <div className="header-chapter">
+          <span>Chapter {chapterNumber} of 5</span>
+          <strong>{state.chapterTitle}</strong>
         </div>
+        <ul className="header-party" aria-label="Players at this table">
+          {state.players.map((p) => (
+            <li key={p.id}>
+              <span
+                className="connection-dot"
+                data-online={p.id === player?.id ? connected : online(p.id)}
+              />
+              <span>{p.name}</span>
+              <small>
+                {p.id === player?.id
+                  ? connected
+                    ? "you"
+                    : "reconnecting…"
+                  : online(p.id)
+                    ? "here"
+                    : "away"}
+              </small>
+            </li>
+          ))}
+          {state.players.length < 2 && (
+            <li className="empty-seat">
+              <span className="connection-dot" />
+              <span>Second seat open</span>
+            </li>
+          )}
+        </ul>
         <div className="header-actions">
+          <a className="all-activities" href="/">
+            <ArrowLeft size={15} />
+            <span>All activities</span>
+          </a>
           <button
             className="subtle"
             onClick={() => void inviteCompanion()}
@@ -953,23 +992,644 @@ export default function App() {
       </header>
       {lessonPaused && (
         <section className="lesson-pause-banner" role="status">
-          <strong>
-            {state.lessonStatus === "archived"
-              ? "This adventure is archived."
-              : "Your lesson is paused."}
-          </strong>
-          <p>
-            Your discoveries, objects and journal are saved. You can review them
-            now; your teacher will reopen the table when it is time to continue.
-          </p>
+          <Pause size={18} />
+          <div>
+            <strong>
+              {state.lessonStatus === "archived"
+                ? "This adventure is archived."
+                : "Your lesson is paused."}
+            </strong>
+            <p>
+              Your discoveries, objects and journal are saved. You can review
+              them now; your teacher will reopen the table when it is time to
+              continue.
+            </p>
+          </div>
         </section>
       )}
       <main className="table-grid">
-        <aside className="character-panel">
-          <div className="panel-title">
-            <span>01 / EXPEDITION</span>
-            <Users size={15} />
+        <section className="stage" id="stage" aria-label="Current scene">
+          <figure className="scene-plate">
+            <button
+              className="scene-canvas"
+              onClick={() => setSceneOpen(true)}
+              aria-label="View current scene illustration"
+            >
+              <img src={state.scene.imageUrl} alt={state.scene.description} />
+              <span className="expand-label" aria-hidden="true">
+                <Maximize2 size={15} />
+              </span>
+            </button>
+            <figcaption className="scene-heading">
+              <span>
+                <MapPin size={13} />
+                {state.scene.location}
+              </span>
+              <h1>{state.scene.title}</h1>
+            </figcaption>
+            {state.scene.status === "generating" && (
+              <span className="scene-painting" role="status">
+                <LoaderCircle className="spin" size={14} />
+                Painting the next moment…
+              </span>
+            )}
+          </figure>
+          <p className="scene-description">{state.scene.description}</p>
+          {state.scene.status === "error" && (
+            <div className="scene-error">
+              <span>
+                This illustration is unavailable. Your adventure can continue.
+              </span>
+              <button
+                className="subtle"
+                onClick={() =>
+                  void perform(() =>
+                    api(`/api/rooms/${state.id}/image-retry`, {}),
+                  )
+                }
+              >
+                Try illustration again
+              </button>
+            </div>
+          )}
+          {latestScenes.length > 1 && (
+            <nav className="scene-filmstrip" aria-label="Earlier views">
+              {latestScenes.map((scene) => (
+                <button
+                  key={scene.id}
+                  className={scene.id === state.scene.id ? "current" : ""}
+                  aria-current={scene.id === state.scene.id || undefined}
+                  title={scene.title}
+                  aria-label={`View ${scene.title}`}
+                  onClick={() => {
+                    if (scene.id === state.scene.id) setSceneOpen(true);
+                    else setViewedScene(scene);
+                  }}
+                >
+                  <img src={scene.imageUrl} alt="" />
+                </button>
+              ))}
+            </nav>
+          )}
+          {state.pendingCheck && (
+            <div className="dice-card" role="status">
+              <Dices size={34} strokeWidth={1.4} />
+              <div>
+                <h3>
+                  {checkCharacter?.shortName} ·{" "}
+                  {statNames[state.pendingCheck.stat]} check
+                </h3>
+                <p>{state.pendingCheck.reason}</p>
+                <small>
+                  Roll D6 + {checkCharacter?.stats[state.pendingCheck.stat]}{" "}
+                  {state.pendingCheck.stat} · reach {state.pendingCheck.target}
+                  {state.pendingCheck.dangerous
+                    ? " · a setback costs 1 HP"
+                    : ""}
+                </small>
+              </div>
+              <button
+                className="primary"
+                disabled={
+                  busy ||
+                  dmBusy ||
+                  state.pendingCheck.characterId !== player?.characterId ||
+                  !connected
+                }
+                onClick={() =>
+                  void perform(() =>
+                    api(`/api/rooms/${state.id}/roll`, {
+                      checkId: state.pendingCheck!.id,
+                    }),
+                  )
+                }
+              >
+                {state.pendingCheck.characterId === player?.characterId ? (
+                  <>
+                    <Dices size={16} />
+                    Roll D6
+                  </>
+                ) : (
+                  <>Waiting for {checkCharacter?.shortName}</>
+                )}
+              </button>
+            </div>
+          )}
+          {state.pendingCheck &&
+            state.pendingCheck.characterId !== player?.characterId &&
+            state.players.some(
+              (p) =>
+                p.characterId === state.pendingCheck!.characterId &&
+                !online(p.id),
+            ) && (
+              <div className="offline-check">
+                <p>
+                  The player needed for this check is away. Wait for them, help
+                  them return in Table settings, or cancel this check to
+                  continue.
+                </p>
+                <button
+                  className="subtle"
+                  disabled={busy || !connected}
+                  onClick={() =>
+                    void perform(() =>
+                      api(`/api/rooms/${state.id}/check-cancel`, {
+                        checkId: state.pendingCheck!.id,
+                      }),
+                    )
+                  }
+                >
+                  Cancel absent companion’s check
+                </button>
+              </div>
+            )}
+          {state.lastRoll && !state.pendingCheck && (
+            <div
+              className={`last-roll ${state.lastRoll.success ? "success" : "setback"}`}
+            >
+              <span className="die-face" aria-hidden="true">
+                {state.lastRoll.die}
+              </span>
+              <span>
+                {rollCharacter?.shortName} rolled{" "}
+                <strong>
+                  {state.lastRoll.die} +{" "}
+                  {rollCharacter?.stats[state.lastRoll.stat]} ={" "}
+                  {state.lastRoll.total}
+                </strong>
+              </span>
+              <span className="roll-result">
+                {state.lastRoll.success ? "Success" : "Setback"}
+              </span>
+              {state.rollDecision === state.lastRoll.id &&
+                !state.lastRoll.success &&
+                !state.lastRoll.rerolled &&
+                state.lastRoll.characterId === player?.characterId &&
+                state.characters.find((c) => c.id === player.characterId)!.hp >=
+                  2 &&
+                state.phase === "playing" && (
+                  <span className="roll-choice">
+                    <button
+                      className="subtle"
+                      disabled={busy || dmBusy}
+                      onClick={() =>
+                        void perform(() =>
+                          api(`/api/rooms/${state.id}/roll-accept`, {
+                            checkId: state.lastRoll!.id,
+                          }),
+                        )
+                      }
+                    >
+                      Accept setback
+                      <ChevronRight size={13} />
+                    </button>
+                    <button
+                      className="subtle"
+                      disabled={busy || dmBusy}
+                      onClick={() =>
+                        void perform(() =>
+                          api(`/api/rooms/${state.id}/reroll`, {
+                            checkId: state.lastRoll!.id,
+                          }),
+                        )
+                      }
+                    >
+                      <RotateCcw size={13} />
+                      Push your luck · −1 HP
+                    </button>
+                  </span>
+                )}
+            </div>
+          )}
+          <section
+            className="storyteller"
+            data-status={live.dmStatus}
+            aria-labelledby="storyteller-title"
+          >
+            <div className="storyteller-head">
+              <h2 id="storyteller-title">The storyteller</h2>
+              <div
+                className={`sound-wave ${live.dmStatus === "speaking" ? "moving" : ""}`}
+                aria-hidden="true"
+              >
+                {Array.from({ length: 7 }, (_, i) => (
+                  <i key={i} style={{ animationDelay: `${i * 0.12}s` }} />
+                ))}
+              </div>
+              {state.phase === "playing" && (
+                <span className="storyteller-state">{sceneStatus}</span>
+              )}
+            </div>
+            <p className={`narration ${caption ? "live" : ""}`}>
+              {caption ||
+                lastDM?.text ||
+                (state.phase === "lobby"
+                  ? state.players.length < 2
+                    ? "The storm has passed. Invite your companion, then begin at the wreck."
+                    : "The storm has passed. Begin at the wreck when you are both ready."
+                  : "The storyteller is gathering the next thread of your adventure…")}
+              {caption && <span className="cursor" />}
+            </p>
+            {state.phase === "lobby" ? (
+              <div className="lobby-callout">
+                <div>
+                  <strong>
+                    {state.players.length < 2
+                      ? "One more seat to fill."
+                      : "Your party is ready."}
+                  </strong>
+                  <p>
+                    {state.players.length < 2
+                      ? "Share your private invitation with your partner."
+                      : `${state.players.map((p) => p.name).join(" and ")} — the island is yours to explore.`}
+                  </p>
+                </div>
+                {state.players.length < 2 ? (
+                  <button
+                    className="primary"
+                    onClick={() => void inviteCompanion()}
+                    disabled={busy}
+                  >
+                    <Link size={16} />
+                    Invite companion
+                  </button>
+                ) : (
+                  <button
+                    className="primary"
+                    disabled={busy || !config?.aiAvailable || !connected}
+                    onClick={() =>
+                      void perform(() =>
+                        api(`/api/rooms/${state.id}/start`, {}),
+                      )
+                    }
+                  >
+                    {busy ? (
+                      <LoaderCircle size={17} className="spin" />
+                    ) : (
+                      <>
+                        Begin adventure
+                        <ArrowRight size={17} />
+                      </>
+                    )}
+                  </button>
+                )}
+                {!config?.aiAvailable && (
+                  <p className="config-note">
+                    Storyteller is not available. Contact your host.
+                  </p>
+                )}
+              </div>
+            ) : state.phase === "complete" ? (
+              <div className="ending">
+                <Sunrise size={24} />
+                <div>
+                  <strong>
+                    {state.ending?.rescued
+                      ? "You found your way home."
+                      : "Your story is written."}
+                  </strong>
+                  <p>
+                    {state.ending?.choice === "confront"
+                      ? "You chose to confront the keeper."
+                      : state.ending?.choice === "forgive"
+                        ? "You chose to forgive the keeper."
+                        : state.ending?.choice === "leave"
+                          ? "You chose to leave without reconciliation."
+                          : "Every choice brought you here."}{" "}
+                    {state.ending?.rescued ? "The party was rescued. " : ""}
+                    Your discoveries, choice and journal are saved.
+                  </p>
+                </div>
+                <button className="subtle" onClick={leave}>
+                  Start another adventure · keep this journal
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="voice-bar">
+                  <button
+                    className={`talk-button ${listening ? "recording" : ""}`}
+                    disabled={
+                      !listening &&
+                      (!voiceEnabled ||
+                        talkLoading ||
+                        partyVoice.loading ||
+                        partyVoice.talking ||
+                        !!live.partySpeaker ||
+                        !connected ||
+                        lessonPaused ||
+                        !!state.pendingCheck ||
+                        !!state.rollDecision ||
+                        !!(live.speaker && live.speaker !== player?.id))
+                    }
+                    onClick={() => void toggleTalk()}
+                    aria-pressed={listening}
+                    aria-label={
+                      listening ? "Finish speaking" : "Speak to the storyteller"
+                    }
+                  >
+                    {talkLoading ? (
+                      <LoaderCircle className="spin" size={22} />
+                    ) : listening ? (
+                      <span className="stop-square" />
+                    ) : (
+                      <Mic size={22} />
+                    )}
+                  </button>
+                  <p className="voice-status">
+                    {voiceEnabled
+                      ? listening
+                        ? "Tap again when you finish."
+                        : "Tap the microphone to speak. Tap again to finish."
+                      : "Enable voice to hear and speak with your storyteller."}
+                  </p>
+                  <button
+                    className="icon-button"
+                    aria-label={
+                      muted
+                        ? "Unmute storyteller audio"
+                        : "Mute storyteller audio"
+                    }
+                    aria-pressed={muted}
+                    onClick={() => {
+                      setMuted(!muted);
+                      muteRef.current = !muted;
+                      audio.current.clear();
+                    }}
+                  >
+                    {muted ? <VolumeX size={18} /> : <Volume2 size={18} />}
+                  </button>
+                  <button
+                    className={`voice-enable ${voiceEnabled ? "on" : ""}`}
+                    disabled={
+                      voiceLoading ||
+                      (!voiceEnabled &&
+                        (lessonPaused || !connected || !config?.aiAvailable))
+                    }
+                    onClick={() => void toggleVoice()}
+                  >
+                    {voiceLoading ? (
+                      <LoaderCircle className="spin" size={15} />
+                    ) : voiceEnabled ? (
+                      <MicOff size={15} />
+                    ) : (
+                      <Mic size={15} />
+                    )}
+                    <span>
+                      {voiceLoading
+                        ? "Opening voice…"
+                        : voiceEnabled
+                          ? "Leave voice"
+                          : "Enable voice"}
+                    </span>
+                  </button>
+                </div>
+                <form
+                  className="action-box"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    const action = text;
+                    void perform(async () => {
+                      await api(`/api/rooms/${state.id}/action`, {
+                        text: action,
+                      });
+                      setText("");
+                    });
+                  }}
+                >
+                  <label
+                    className="storyteller-label"
+                    htmlFor="storyteller-action"
+                  >
+                    Ask the storyteller
+                  </label>
+                  <input
+                    id="storyteller-action"
+                    placeholder={
+                      state.pendingCheck || state.rollDecision
+                        ? "Resolve the dice check to continue…"
+                        : "Describe your action or ask about your discovery…"
+                    }
+                    value={text}
+                    onChange={(e) => setText(e.target.value)}
+                    maxLength={1200}
+                    disabled={
+                      busy ||
+                      dmBusy ||
+                      !!state.pendingCheck ||
+                      !!state.rollDecision ||
+                      !!live.speaker ||
+                      !!live.partySpeaker ||
+                      partyVoice.talking ||
+                      partyVoice.loading ||
+                      !connected
+                    }
+                  />
+                  <button
+                    aria-label="Send to the storyteller"
+                    disabled={
+                      busy ||
+                      dmBusy ||
+                      !!state.pendingCheck ||
+                      !!state.rollDecision ||
+                      !!live.speaker ||
+                      !!live.partySpeaker ||
+                      partyVoice.talking ||
+                      partyVoice.loading ||
+                      !text.trim() ||
+                      !connected
+                    }
+                  >
+                    <Send size={18} />
+                  </button>
+                </form>
+                {live.dmStatus === "error" && (
+                  <div className="dm-error">
+                    <span>
+                      {playerMessage(
+                        live.error ??
+                          "Storyteller is not available. Contact your host.",
+                      )}
+                    </span>
+                    <button
+                      className="subtle"
+                      onClick={() =>
+                        void perform(() =>
+                          api(`/api/rooms/${state.id}/resume`, {}),
+                        )
+                      }
+                    >
+                      Resume storyteller
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+          </section>
+        </section>
+        <aside
+          className="notebook"
+          id="notebook"
+          aria-label="Expedition notebook"
+        >
+          <div
+            className="journal-tabs"
+            role="tablist"
+            aria-label="Adventure notebook"
+          >
+            {(["evidence", "story", "clues", "journal"] as const).map((t) => (
+              <button
+                role="tab"
+                aria-selected={tab === t}
+                className={tab === t ? "active" : ""}
+                key={t}
+                onClick={() => setTab(t)}
+              >
+                {t === "evidence"
+                  ? "Evidence"
+                  : t === "story"
+                    ? "Story"
+                    : t === "clues"
+                      ? "Clues"
+                      : "Full log"}
+                {t === "clues" && state.clues.length > 0 && (
+                  <small>{state.clues.length}</small>
+                )}
+              </button>
+            ))}
           </div>
+          <div className="journal-scroll" ref={transcript}>
+            {tab === "evidence" && state.phase === "lobby" ? (
+              <div className="notebook-intro">
+                <ScrollText size={28} strokeWidth={1.3} />
+                <h3>Two records. One discovery.</h3>
+                <p>
+                  When the adventure begins, each of you receives a different
+                  record here. Describe yours in English and open both locks
+                  together.
+                </p>
+              </div>
+            ) : tab === "evidence" && credentials ? (
+              <PuzzlePanel
+                key={state.puzzleView?.id}
+                room={state}
+                credentials={credentials}
+                readingMode={readingMode}
+                setReadingMode={setReadingMode}
+              />
+            ) : tab === "clues" ? (
+              state.clues.length ? (
+                <ol className="clue-list">
+                  {state.clues.map((c) => (
+                    <li className="clue" key={c.id}>
+                      <h3>{c.title}</h3>
+                      <p>{c.text}</p>
+                    </li>
+                  ))}
+                </ol>
+              ) : (
+                <div className="notebook-intro">
+                  <ScrollText size={28} strokeWidth={1.3} />
+                  <h3>No clues yet.</h3>
+                  <p>
+                    Explore the shore. Clues you discover together are recorded
+                    here.
+                  </p>
+                </div>
+              )
+            ) : (
+              <>
+                {state.journal
+                  .filter(
+                    (e) =>
+                      tab === "journal" ||
+                      e.kind === "dm" ||
+                      e.kind === "player" ||
+                      e.kind === "roll",
+                  )
+                  .map((entry) => (
+                    <article key={entry.id} className={`entry ${entry.kind}`}>
+                      <div className="entry-meta">
+                        {entry.kind === "dm" ? (
+                          <>
+                            <Compass size={13} />
+                            Storyteller
+                          </>
+                        ) : entry.kind === "player" ? (
+                          <>
+                            <Feather size={13} />
+                            {state.players.find((p) => p.id === entry.playerId)
+                              ?.name ?? "Player"}
+                          </>
+                        ) : entry.kind === "roll" ? (
+                          <>
+                            <Dices size={13} />
+                            The dice
+                          </>
+                        ) : (
+                          <>
+                            <Anchor size={12} />
+                            The journey
+                          </>
+                        )}
+                        <time>
+                          {new Date(entry.at).toLocaleTimeString("en", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </time>
+                      </div>
+                      <p>{entry.text}</p>
+                    </article>
+                  ))}
+                {!state.journal.some(
+                  (e) => tab === "journal" || e.kind !== "system",
+                ) && (
+                  <div className="notebook-intro">
+                    <Feather size={28} strokeWidth={1.3} />
+                    <h3>An unwritten chapter.</h3>
+                    <p>Your conversation and discoveries will appear here.</p>
+                  </div>
+                )}
+                {caption && (
+                  <article className="entry dm live-caption">
+                    <div className="entry-meta">
+                      <Compass size={13} />
+                      Storyteller · live
+                    </div>
+                    <p>
+                      {caption}
+                      <span className="cursor" />
+                    </p>
+                  </article>
+                )}
+              </>
+            )}
+          </div>
+        </aside>
+        {credentials && (
+          <PartyPanel
+            room={state}
+            credentials={credentials}
+            connected={connected}
+            voice={{
+              enabled: partyVoice.enabled,
+              loading: partyVoice.loading,
+              talking: partyVoice.talking,
+              speaker: live.partySpeaker ?? null,
+              blocked:
+                state.phase === "complete" ||
+                dmBusy ||
+                listening ||
+                talkLoading ||
+                voiceLoading ||
+                !!live.speaker,
+              enable: partyVoice.enable,
+              talk: partyVoice.talk,
+            }}
+          />
+        )}
+        <aside className="sheet" id="sheet" aria-label="Character sheets">
           <div
             className="party-tabs"
             role="tablist"
@@ -983,39 +1643,32 @@ export default function App() {
                 className={selectedCharacter === c.id ? "active" : ""}
                 onClick={() => setSelectedCharacter(c.id)}
               >
-                {c.shortName}
-                {c.id === player?.characterId && <span className="you-dot" />}
+                <img src={`/art/${c.id}-sunburst.webp`} alt="" />
+                <span>{c.shortName}</span>
+                {c.id === player?.characterId && <small>you</small>}
               </button>
             ))}
           </div>
           {character && (
             <>
-              <div className={`character-hero ${character.id}`}>
+              <figure className={`character-hero ${character.id}`}>
                 <img
                   className="character-portrait"
                   src={`/art/${character.id}-sunburst.webp`}
                   alt={`${character.name}, ${character.role.toLowerCase()}`}
                 />
-                <div className="portrait-shade" />
-                <div className="portrait-grain" />
-                <div className="character-emblem">
-                  {character.id === "sam" ? (
-                    <Shield size={65} strokeWidth={0.8} />
-                  ) : character.id === "liz" ? (
-                    <Feather size={65} strokeWidth={0.8} />
-                  ) : (
-                    <Trees size={65} strokeWidth={0.8} />
-                  )}
-                </div>
-                <div className="character-badge">
-                  {character.id === "emily"
-                    ? "STORY COMPANION"
-                    : (state.players.find((p) => p.characterId === character.id)
-                        ?.name ?? "AWAITING PLAYER")}
-                </div>
-                <h2>{character.name}</h2>
-                <p>{character.role}</p>
-              </div>
+                <figcaption>
+                  <h2>{character.name}</h2>
+                  <p>
+                    {character.role} ·{" "}
+                    {character.id === "emily"
+                      ? "story companion"
+                      : (state.players.find(
+                          (p) => p.characterId === character.id,
+                        )?.name ?? "awaiting player")}
+                  </p>
+                </figcaption>
+              </figure>
               <div className="health-block">
                 <div>
                   <span>
@@ -1027,7 +1680,15 @@ export default function App() {
                     <small> / {character.maxHp}</small>
                   </strong>
                 </div>
-                <div className="health-track">
+                <div
+                  className="health-track"
+                  role="meter"
+                  aria-label={`${character.shortName}'s vitality`}
+                  aria-valuemin={0}
+                  aria-valuemax={character.maxHp}
+                  aria-valuenow={character.hp}
+                  style={{ "--notches": character.maxHp } as CSSProperties}
+                >
                   <div
                     style={{
                       width: `${(character.hp / character.maxHp) * 100}%`,
@@ -1066,720 +1727,53 @@ export default function App() {
                     <p>Take a safe pause. Your evidence stays with you.</p>
                   </div>
                 )}
-              <div className="stats-grid">
+              <dl className="stats-grid">
                 {(["STR", "INT", "SUR"] as Stat[]).map((stat) => {
                   const Icon = statIcons[stat];
                   return (
                     <div key={stat}>
-                      <Icon size={18} />
-                      <strong>{character.stats[stat]}</strong>
-                      <span>{stat}</span>
+                      <dt>
+                        <Icon size={15} />
+                        <abbr title={statNames[stat]}>{stat}</abbr>
+                        <span>{statNames[stat]}</span>
+                      </dt>
+                      <dd>{character.stats[stat]}</dd>
                     </div>
                   );
                 })}
-              </div>
+              </dl>
               <p className="character-bio">{character.bio}</p>
               <Inventory
                 items={character.inventory}
                 owner={character.shortName}
               />
-              <div className="party-presence">
-                {state.players.map((p) => (
-                  <div key={p.id}>
-                    <span
-                      className="connection-dot"
-                      data-online={live.presence.some(
-                        (x) => x.playerId === p.id && x.online,
-                      )}
-                    />
-                    <span>{p.name}</span>
-                    <small>
-                      {p.id === player?.id
-                        ? "you"
-                        : live.presence.some(
-                              (x) => x.playerId === p.id && x.online,
-                            )
-                          ? "at the table"
-                          : "away"}
-                    </small>
-                  </div>
-                ))}
-              </div>
             </>
           )}
-        </aside>
-        <section className="adventure-panel">
-          <div className="scene-toolbar">
-            <span className="eyebrow">
-              <span />
-              CHAPTER {String(Math.min(state.chapter + 1, 5)).padStart(2, "0")}
-            </span>
-            <span>
-              <MapPin size={13} />
-              {state.scene.location}
-            </span>
-          </div>
-          <button
-            className="scene-canvas"
-            onClick={() => setSceneOpen(true)}
-            aria-label="View current scene illustration"
-          >
-            <img src={state.scene.imageUrl} alt={state.scene.description} />
-            <div className="scene-vignette" />
-            <div className="scene-tags">
-              <span>
-                <Compass size={13} />
-                CURRENT OBSERVATION
-              </span>
-              {state.scene.status === "generating" && (
-                <span className="painting">
-                  <Sparkles size={13} />
-                  Painting the next moment…
-                </span>
-              )}
-            </div>
-            <span className="expand-label">
-              Explore scene
-              <ArrowRight size={13} />
-            </span>
-          </button>
-          <div className="scene-copy">
-            <span className="plate-number">
-              FIELD RECORD / {String(state.chapter).padStart(2, "0")}
-            </span>
-            <span className="small-caps">{state.scene.location}</span>
-            <h1>{state.scene.title}</h1>
-            <p>{state.scene.description}</p>
-          </div>
-          {state.scene.status === "error" && (
-            <div className="scene-error">
-              <Sparkles size={14} />
-              <span>
-                {
-                  "This illustration is unavailable. Your adventure can continue."
-                }
-              </span>
-              <button
-                onClick={() =>
-                  void perform(() =>
-                    api(`/api/rooms/${state.id}/image-retry`, {}),
-                  )
-                }
-              >
-                Try illustration again
-              </button>
-            </div>
-          )}
-          <div className="scene-filmstrip">
-            {latestScenes.map((scene, index) => (
-              <button
-                key={scene.id}
-                className={scene.id === state.scene.id ? "current" : ""}
-                onClick={() => {
-                  if (scene.id === state.scene.id) setSceneOpen(true);
-                  else setViewedScene(scene);
-                }}
-              >
-                <img src={scene.imageUrl} alt="" />
-                <span>{String(index + 1).padStart(2, "0")}</span>
-                <p>{scene.title}</p>
-              </button>
-            ))}
-            <div className="filmstrip-note">
-              <Sparkles size={14} />
-              <span>
-                Collected views
-                <br />
-                of the island.
-              </span>
-            </div>
-          </div>
-          {state.pendingCheck && (
-            <div className="dice-card">
-              <div className="dice-icon">
-                <Dices size={30} />
-              </div>
-              <div>
-                <span className="eyebrow">A MOMENT OF CHANCE</span>
-                <h3>
-                  {
-                    state.characters.find(
-                      (c) => c.id === state.pendingCheck!.characterId,
-                    )?.shortName
-                  }{" "}
-                  · {state.pendingCheck.stat} check
-                </h3>
-                <p>{state.pendingCheck.reason}</p>
-                <small>
-                  D6 +{" "}
-                  {
-                    state.characters.find(
-                      (c) => c.id === state.pendingCheck!.characterId,
-                    )?.stats[state.pendingCheck.stat]
-                  }{" "}
-                  · target {state.pendingCheck.target}
-                  {state.pendingCheck.dangerous
-                    ? " · a setback costs 1 HP"
-                    : ""}
-                </small>
-              </div>
-              <button
-                className="primary"
-                disabled={
-                  busy ||
-                  dmBusy ||
-                  state.pendingCheck.characterId !== player?.characterId ||
-                  !connected
-                }
-                onClick={() =>
-                  void perform(() =>
-                    api(`/api/rooms/${state.id}/roll`, {
-                      checkId: state.pendingCheck!.id,
-                    }),
-                  )
-                }
-              >
-                {state.pendingCheck.characterId === player?.characterId ? (
-                  <>
-                    <Dices size={16} />
-                    Roll D6
-                  </>
-                ) : (
-                  <>
-                    Waiting for{" "}
-                    {
-                      state.characters.find(
-                        (c) => c.id === state.pendingCheck!.characterId,
-                      )?.shortName
-                    }
-                  </>
-                )}
-              </button>
-            </div>
-          )}
-          {state.pendingCheck &&
-            state.pendingCheck.characterId !== player?.characterId &&
-            state.players.some(
-              (p) =>
-                p.characterId === state.pendingCheck!.characterId &&
-                !live.presence.some(
-                  (presence) => presence.playerId === p.id && presence.online,
-                ),
-            ) && (
-              <div className="offline-check">
-                <p>
-                  The player needed for this check is away. Wait for them, help
-                  them return in Table settings, or cancel this check to
-                  continue.
-                </p>
-                <button
-                  className="subtle"
-                  disabled={busy || !connected}
-                  onClick={() =>
-                    void perform(() =>
-                      api(`/api/rooms/${state.id}/check-cancel`, {
-                        checkId: state.pendingCheck!.id,
-                      }),
-                    )
-                  }
-                >
-                  Cancel absent companion’s check
-                </button>
-              </div>
-            )}
-          {state.lastRoll && !state.pendingCheck && (
-            <div className="last-roll">
-              <Dices size={18} />
-              <span>
-                {
-                  state.characters.find(
-                    (c) => c.id === state.lastRoll!.characterId,
-                  )?.shortName
-                }
-                :{" "}
-                <strong>
-                  {state.lastRoll.die} +{" "}
-                  {
-                    state.characters.find(
-                      (c) => c.id === state.lastRoll!.characterId,
-                    )?.stats[state.lastRoll.stat]
-                  }{" "}
-                  = {state.lastRoll.total}
-                </strong>
-              </span>
-              <span className={state.lastRoll.success ? "success" : "setback"}>
-                {state.lastRoll.success ? "Success" : "Setback"}
-              </span>
-              {state.rollDecision === state.lastRoll.id &&
-                !state.lastRoll.success &&
-                !state.lastRoll.rerolled &&
-                state.lastRoll.characterId === player?.characterId &&
-                state.characters.find((c) => c.id === player.characterId)!.hp >=
-                  2 &&
-                state.phase === "playing" && (
-                  <>
-                    <button
-                      className="accept-roll"
-                      disabled={busy || dmBusy}
-                      onClick={() =>
-                        void perform(() =>
-                          api(`/api/rooms/${state.id}/roll-accept`, {
-                            checkId: state.lastRoll!.id,
-                          }),
-                        )
-                      }
-                    >
-                      Accept setback
-                      <ChevronRight size={13} />
-                    </button>
-                    <button
-                      disabled={busy || dmBusy}
-                      onClick={() =>
-                        void perform(() =>
-                          api(`/api/rooms/${state.id}/reroll`, {
-                            checkId: state.lastRoll!.id,
-                          }),
-                        )
-                      }
-                    >
-                      <RotateCcw size={13} />
-                      Push your luck · −1 HP
-                    </button>
-                  </>
-                )}
-            </div>
-          )}
-          <div className="narrator-card">
-            <div className="narrator-mark">
-              <Compass size={25} />
-            </div>
-            <div>
-              <div className="narrator-label">
-                <span>THE STORYTELLER</span>
-                <div
-                  className={`sound-wave ${live.dmStatus === "speaking" ? "moving" : ""}`}
-                >
-                  {Array.from({ length: 9 }, (_, i) => (
-                    <i key={i} style={{ animationDelay: `${i * 0.12}s` }} />
-                  ))}
-                </div>
-              </div>
-              <p>
-                {caption ||
-                  lastDM?.text ||
-                  (state.phase === "lobby"
-                    ? "The storm has passed. Invite your companion, then begin at the wreck."
-                    : "The storyteller is gathering the next thread of your adventure…")}
-              </p>
-            </div>
-          </div>
-          {state.phase === "lobby" ? (
-            <div className="lobby-callout">
-              <div>
-                <Users size={20} />
-                <div>
-                  <strong>
-                    {state.players.length < 2
-                      ? "One more seat to fill."
-                      : "Your party is ready."}
-                  </strong>
-                  <p>
-                    {state.players.length < 2
-                      ? "Share your private invitation with your partner."
-                      : `${state.players.map((p) => p.name).join(" and ")} — the island is yours to explore.`}
-                  </p>
-                </div>
-              </div>
-              <button
-                className="primary"
-                disabled={
-                  busy ||
-                  state.players.length < 2 ||
-                  !config?.aiAvailable ||
-                  !connected
-                }
-                onClick={() =>
-                  void perform(() => api(`/api/rooms/${state.id}/start`, {}))
-                }
-              >
-                {busy ? (
-                  <LoaderCircle size={17} className="spin" />
-                ) : (
-                  <>
-                    Begin adventure
-                    <ArrowRight size={17} />
-                  </>
-                )}
-              </button>
-              {!config?.aiAvailable && (
-                <p className="config-note">
-                  Storyteller is not available. Contact your host.
-                </p>
-              )}
-            </div>
-          ) : state.phase === "complete" ? (
-            <div className="ending">
-              <Sunrise size={22} />
-              <strong>
-                {state.ending?.rescued
-                  ? "You found your way home."
-                  : "Your story is written."}
-              </strong>
-              <span>
-                {state.ending?.choice === "confront"
-                  ? "You chose to confront the keeper."
-                  : state.ending?.choice === "forgive"
-                    ? "You chose to forgive the keeper."
-                    : state.ending?.choice === "leave"
-                      ? "You chose to leave without reconciliation."
-                      : "Every choice brought you here."}{" "}
-                {state.ending?.rescued ? "The party was rescued. " : ""}Your
-                discoveries, choice and journal are saved.
-              </span>
-              <button className="subtle" onClick={leave}>
-                Start another adventure · keep this journal
-              </button>
-            </div>
-          ) : (
-            <>
-              <div className="voice-bar">
-                <div
-                  className={`live-orb ${live.dmStatus === "speaking" ? "speaking" : ""}`}
-                >
-                  <Wind size={18} />
-                </div>
-                <div className="voice-status">
-                  <strong>
-                    {listening
-                      ? "Your turn. Speak to the storyteller."
-                      : live.speaker
-                        ? `${state.players.find((p) => p.id === live.speaker)?.name} is speaking…`
-                        : statusText[live.dmStatus]}
-                  </strong>
-                  <span>
-                    {voiceEnabled
-                      ? "Tap the microphone to speak. Tap again to finish."
-                      : "Enable voice to hear and speak with your storyteller."}
-                  </span>
-                </div>
-                <button
-                  className={`talk-button ${listening ? "recording" : ""}`}
-                  disabled={
-                    !listening &&
-                    (!voiceEnabled ||
-                      talkLoading ||
-                      partyVoice.loading ||
-                      partyVoice.talking ||
-                      !!live.partySpeaker ||
-                      !connected ||
-                      !!state.pendingCheck ||
-                      !!state.rollDecision ||
-                      !!(live.speaker && live.speaker !== player?.id))
-                  }
-                  onClick={() => void toggleTalk()}
-                  aria-pressed={listening}
-                  aria-label={
-                    listening ? "Finish speaking" : "Speak to the storyteller"
-                  }
-                >
-                  {listening ? (
-                    <span className="stop-square" />
-                  ) : (
-                    <Mic size={20} />
-                  )}
-                </button>
-                <button
-                  className="icon-button"
-                  aria-label={
-                    muted
-                      ? "Unmute storyteller audio"
-                      : "Mute storyteller audio"
-                  }
-                  onClick={() => {
-                    setMuted(!muted);
-                    muteRef.current = !muted;
-                    audio.current.clear();
-                  }}
-                >
-                  {muted ? <VolumeX size={18} /> : <Volume2 size={18} />}
-                </button>
-                <button
-                  className="voice-enable"
-                  disabled={
-                    voiceLoading ||
-                    (!voiceEnabled && (!connected || !config?.aiAvailable))
-                  }
-                  onClick={() => void toggleVoice()}
-                >
-                  {voiceLoading ? (
-                    <LoaderCircle className="spin" size={15} />
-                  ) : voiceEnabled ? (
-                    <MicOff size={15} />
-                  ) : (
-                    <Mic size={15} />
-                  )}
-                  <span>{voiceEnabled ? "Leave voice" : "Enable voice"}</span>
-                </button>
-              </div>
-              <label className="storyteller-label" htmlFor="storyteller-action">
-                Ask the storyteller
-              </label>
-              <form
-                className="action-box"
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  const action = text;
-                  void perform(async () => {
-                    await api(`/api/rooms/${state.id}/action`, {
-                      text: action,
-                    });
-                    setText("");
-                  });
-                }}
-              >
-                <input
-                  id="storyteller-action"
-                  aria-label="Ask the storyteller"
-                  placeholder={
-                    state.pendingCheck || state.rollDecision
-                      ? "Resolve the dice check to continue…"
-                      : "Describe your action or ask about your discovery…"
-                  }
-                  value={text}
-                  onChange={(e) => setText(e.target.value)}
-                  maxLength={1200}
-                  disabled={
-                    busy ||
-                    dmBusy ||
-                    !!state.pendingCheck ||
-                    !!state.rollDecision ||
-                    !!live.speaker ||
-                    !!live.partySpeaker ||
-                    partyVoice.talking ||
-                    partyVoice.loading ||
-                    !connected
-                  }
-                />
-                <button
-                  aria-label="Ask the storyteller"
-                  disabled={
-                    busy ||
-                    dmBusy ||
-                    !!state.pendingCheck ||
-                    !!state.rollDecision ||
-                    !!live.speaker ||
-                    !!live.partySpeaker ||
-                    partyVoice.talking ||
-                    partyVoice.loading ||
-                    !text.trim() ||
-                    !connected
-                  }
-                >
-                  <Send size={19} />
-                </button>
-              </form>
-              {live.dmStatus === "error" && (
-                <div className="dm-error">
-                  <span>
-                    {playerMessage(
-                      live.error ??
-                        "Storyteller is not available. Contact your host.",
-                    )}
-                  </span>
-                  <button
-                    onClick={() =>
-                      void perform(() =>
-                        api(`/api/rooms/${state.id}/resume`, {}),
-                      )
-                    }
-                  >
-                    Resume storyteller
-                  </button>
-                </div>
-              )}
-            </>
-          )}
-          {credentials && (
-            <PartyPanel
-              room={state}
-              credentials={credentials}
-              connected={connected}
-              voice={{
-                enabled: partyVoice.enabled,
-                loading: partyVoice.loading,
-                talking: partyVoice.talking,
-                speaker: live.partySpeaker ?? null,
-                blocked:
-                  state.phase === "complete" ||
-                  dmBusy ||
-                  listening ||
-                  talkLoading ||
-                  voiceLoading ||
-                  !!live.speaker,
-                enable: partyVoice.enable,
-                talk: partyVoice.talk,
-              }}
-            />
-          )}
-        </section>
-        <aside className="journal-panel">
-          <div className="panel-title">
-            <span>03 / FIELD NOTES</span>
-            <BookOpen size={16} />
-          </div>
-          <div
-            className="journal-tabs"
-            role="tablist"
-            aria-label="Adventure notebook"
-          >
-            {(["evidence", "story", "clues", "journal"] as const).map((t) => (
-              <button
-                role="tab"
-                aria-selected={tab === t}
-                className={tab === t ? "active" : ""}
-                key={t}
-                onClick={() => setTab(t)}
-              >
-                {t === "evidence"
-                  ? "Evidence"
-                  : t === "story"
-                    ? "At the table"
-                    : t === "clues"
-                      ? `Clues${state.clues.length ? " · " + state.clues.length : ""}`
-                      : "Journal"}
-              </button>
-            ))}
-          </div>
-          <div className="journal-scroll" ref={transcript}>
-            {tab === "evidence" && state.phase === "lobby" ? (
-              <div className="notebook-intro">
-                <ScrollText size={30} />
-                <h3>Two records. One discovery.</h3>
-                <p>
-                  Once your adventure begins, each player receives a different
-                  piece of evidence here. Describe yours in English and work
-                  together to open both locks.
-                </p>
-              </div>
-            ) : tab === "evidence" && credentials ? (
-              <PuzzlePanel
-                key={state.puzzleView?.id}
-                room={state}
-                credentials={credentials}
-                readingMode={readingMode}
-                setReadingMode={setReadingMode}
-              />
-            ) : tab === "clues" ? (
-              <>
-                <div className="notebook-intro">
-                  <ScrollText size={30} />
-                  <h3>The evidence so far.</h3>
-                  <p>Only what you discover belongs here.</p>
-                </div>
-                {state.clues.length ? (
-                  state.clues.map((c) => (
-                    <article className="clue" key={c.id}>
-                      <span className="eyebrow">DISCOVERED</span>
-                      <h3>{c.title}</h3>
-                      <p>{c.text}</p>
-                    </article>
-                  ))
-                ) : (
-                  <p className="empty-copy">
-                    Explore the shore. Clues you discover together will be
-                    recorded here.
-                  </p>
-                )}
-              </>
-            ) : (
-              <>
-                {state.journal
-                  .filter(
-                    (e) =>
-                      tab === "journal" ||
-                      e.kind === "dm" ||
-                      e.kind === "player" ||
-                      e.kind === "roll",
-                  )
-                  .map((entry) => (
-                    <article key={entry.id} className={`entry ${entry.kind}`}>
-                      <div className="entry-meta">
-                        {entry.kind === "dm" ? (
-                          <>
-                            <Compass size={13} />
-                            STORYTELLER
-                          </>
-                        ) : entry.kind === "player" ? (
-                          <>
-                            <Feather size={13} />
-                            {state.players.find((p) => p.id === entry.playerId)
-                              ?.name ?? "PLAYER"}
-                          </>
-                        ) : entry.kind === "roll" ? (
-                          <>
-                            <Dices size={13} />
-                            THE DICE
-                          </>
-                        ) : (
-                          <>
-                            <Anchor size={12} />
-                            THE JOURNEY
-                          </>
-                        )}
-                        <time>
-                          {new Date(entry.at).toLocaleTimeString("en", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </time>
-                      </div>
-                      <p>{entry.text}</p>
-                    </article>
-                  ))}
-                {!state.journal.some(
-                  (e) => tab === "journal" || e.kind !== "system",
-                ) && (
-                  <div className="notebook-intro">
-                    <Feather size={30} />
-                    <h3>An unwritten chapter.</h3>
-                    <p>
-                      Your conversation and discoveries will find a home here.
-                    </p>
-                  </div>
-                )}
-                {caption && (
-                  <article className="entry dm live-caption">
-                    <div className="entry-meta">
-                      <Compass size={13} />
-                      STORYTELLER · LIVE
-                    </div>
-                    <p>
-                      {caption}
-                      <span className="cursor" />
-                    </p>
-                  </article>
-                )}
-              </>
-            )}
-          </div>
-          <div className="journal-foot">
-            <span className="connection-dot" data-online={connected} />
-            <span>
-              {connected ? "Saved as you play" : "Reconnecting to your table"}
-            </span>
-            <Heart size={12} />
-          </div>
         </aside>
       </main>
-      <footer className="table-footer">
-        <span>THE WHISPERING SANDS / EXPEDITION RECORD</span>
-        <span>
-          D6 + attribute ≥ target · {companion?.name ?? "Your companion"}{" "}
-          {live.presence.some((p) => p.playerId === companion?.id && p.online)
-            ? "is here"
-            : "will join you"}
-        </span>
-      </footer>
+      <nav className="table-jump" aria-label="Table sections">
+        <button onClick={() => jump("stage")}>
+          <Compass size={18} />
+          Story
+        </button>
+        <button
+          onClick={() => {
+            setTab("evidence");
+            jump("notebook");
+          }}
+        >
+          <ScrollText size={18} />
+          Evidence
+        </button>
+        <button onClick={() => jump("discussion")}>
+          <MessageCircle size={18} />
+          Talk
+        </button>
+        <button onClick={() => jump("sheet")}>
+          <Users size={18} />
+          {ownCharacter?.shortName ?? "Party"}
+        </button>
+      </nav>
       {inviteModal && (
         <Modal
           title="Adventure is better together."

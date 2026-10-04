@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { BookOpenText, EyeOff, Lightbulb, Lock, LockOpen } from "lucide-react";
 import type { Credentials, RoomState } from "../shared/types";
 export function PuzzlePanel({
   room,
@@ -56,35 +57,64 @@ export function PuzzlePanel({
       setBusy(false);
     }
   }
+  const partner = character === "sam" ? "liz" : "sam";
+  const locks = (["sam", "liz"] as const).map((id) => ({
+    id,
+    name:
+      room.characters.find((c) => c.id === id)?.shortName ??
+      (id === "sam" ? "Sam" : "Liz"),
+    accepted: p.accepted.includes(id),
+    own: id === character,
+  }));
   return (
     <section
       className={`puzzle-panel ${readingMode ? "reading-mode" : ""}`}
       aria-labelledby="puzzle-title"
     >
-      <div className="section-eyebrow">
-        FIELD EVIDENCE · CHAPTER {room.chapter + 1} / 5
-      </div>
-      <div className="reading-controls">
+      <div className="puzzle-heading">
+        <span className="section-eyebrow">
+          Chapter {Math.min(room.chapter + 1, 5)} of 5 · Evidence lock
+        </span>
         <button
+          className="reading-toggle"
           aria-pressed={readingMode}
           onClick={() => setReadingMode(!readingMode)}
         >
-          {readingMode ? "Reading mode on" : "Enable reading mode"}
+          <BookOpenText size={15} />
+          {readingMode ? "Reading mode on" : "Reading mode"}
         </button>
       </div>
       <h2 id="puzzle-title">{p.title}</h2>
-      <p>{p.premise}</p>
-      <p className="language-focus">English in use: {p.languageFocus}</p>
+      <p className="puzzle-premise">{p.premise}</p>
+      <p className="language-focus">
+        <strong>English in use:</strong> {p.languageFocus}
+      </p>
+      <ul className="puzzle-status" aria-live="polite" aria-label="Locks">
+        {locks.map((lock) => (
+          <li key={lock.id} className={lock.accepted ? "accepted" : ""}>
+            {lock.accepted ? <LockOpen size={16} /> : <Lock size={16} />}
+            <span>
+              {lock.own ? "Your lock" : `${lock.name}'s lock`}
+              <strong>{lock.accepted ? "accepted" : "waiting"}</strong>
+            </span>
+          </li>
+        ))}
+      </ul>
       <article className="evidence-card">
-        <span className="section-eyebrow">
-          YOUR PRIVATE RECORD · {character?.toUpperCase()}
+        <span className="evidence-owner">
+          <EyeOff size={14} />
+          Private record · only {locks.find((l) => l.own)?.name ?? "you"} can
+          see this
         </span>
         <h3>{p.evidenceTitle}</h3>
-        {p.evidence.map((line, i) => (
-          <p key={i}>{line}</p>
-        ))}
+        <div className="evidence-lines">
+          {p.evidence.map((line, i) => (
+            <p key={i}>{line}</p>
+          ))}
+        </div>
         <small>
-          Your partner has a different record. Describe this one in English.
+          {locks.find((l) => l.id === partner)?.name ?? "Your partner"} has a
+          different record. Describe this one in English.
         </small>
       </article>
       {!!p.glossary?.length && (
@@ -100,12 +130,8 @@ export function PuzzlePanel({
           </dl>
         </details>
       )}
-      <div className="puzzle-status" aria-live="polite">
-        Sam's lock: {p.accepted.includes("sam") ? "accepted" : "waiting"} ·
-        Liz's lock: {p.accepted.includes("liz") ? "accepted" : "waiting"}
-      </div>
       {p.solved ? (
-        <article className="evidence-card solved">
+        <article className="discovery">
           <h3>Discovery recorded</h3>
           <p>{p.reward}</p>
           <p>Tell the storyteller what you discovered to continue.</p>
@@ -120,60 +146,78 @@ export function PuzzlePanel({
         >
           <label htmlFor="puzzle-answer">{p.task}</label>
           <small id="answer-format">{p.format}</small>
-          <input
-            id="puzzle-answer"
-            aria-describedby="answer-format"
-            value={answer}
-            maxLength={200}
-            autoComplete="off"
-            onChange={(e) => setAnswer(e.target.value)}
-            disabled={accepted || busy}
-            placeholder="Compare your evidence first…"
-          />
-          <button type="submit" disabled={accepted || busy || !answer.trim()}>
-            {accepted ? "Your lock accepted" : "Test arrangement"}
-          </button>
+          <div className="answer-row">
+            <input
+              id="puzzle-answer"
+              aria-describedby="answer-format"
+              value={answer}
+              maxLength={200}
+              autoComplete="off"
+              onChange={(e) => setAnswer(e.target.value)}
+              disabled={accepted || busy}
+              placeholder="Compare your evidence first…"
+            />
+            <button
+              type="submit"
+              className="primary"
+              disabled={accepted || busy || !answer.trim()}
+            >
+              {accepted ? "Your lock accepted" : "Test arrangement"}
+            </button>
+          </div>
         </form>
+      )}
+      {message && (
+        <p role="status" className="puzzle-message">
+          {message}
+        </p>
       )}
       {(p.hints.length > 0 || !p.solved) && (
         <div className="puzzle-hints">
-          <button
-            disabled={busy || p.hints.length >= 3 || p.solved}
-            onClick={() =>
-              void send("puzzle-hint", {
-                puzzleId: p.id,
-                expectedHintCount: p.hints.length,
-              })
-            }
-          >
-            {p.hints.length >= 3
-              ? "All three hints are open"
-              : `Reveal hint ${p.hints.length + 1} of 3`}
-          </button>
-          <small>No time penalty. No HP lost for trying.</small>
           {p.hints.map((hint, i) => (
             <p key={i}>
               <strong>Hint {i + 1}.</strong> {hint}
             </p>
           ))}
+          <div className="hint-row">
+            <button
+              className="subtle"
+              disabled={busy || p.hints.length >= 3 || p.solved}
+              onClick={() =>
+                void send("puzzle-hint", {
+                  puzzleId: p.id,
+                  expectedHintCount: p.hints.length,
+                })
+              }
+            >
+              <Lightbulb size={15} />
+              {p.hints.length >= 3
+                ? "All three hints are open"
+                : `Reveal hint ${p.hints.length + 1} of 3`}
+            </button>
+            <small>No time penalty. No HP lost for trying.</small>
+          </div>
         </div>
       )}
-      {message && <p role="status">{message}</p>}
       <details className="worker-notebook">
         <summary>Expedition notebook &amp; English helper</summary>
         <p>Ask a helper while the storyteller continues.</p>
-        <button
-          disabled={busy}
-          onClick={() => void send("background", { task: "recap" })}
-        >
-          Summarise our discoveries
-        </button>
-        <button
-          disabled={busy}
-          onClick={() => void send("background", { task: "language_coach" })}
-        >
-          English feedback
-        </button>
+        <div className="worker-actions">
+          <button
+            className="subtle"
+            disabled={busy}
+            onClick={() => void send("background", { task: "recap" })}
+          >
+            Summarise our discoveries
+          </button>
+          <button
+            className="subtle"
+            disabled={busy}
+            onClick={() => void send("background", { task: "language_coach" })}
+          >
+            English feedback
+          </button>
+        </div>
         {room.workers
           ?.filter(
             (j) =>
@@ -183,7 +227,7 @@ export function PuzzlePanel({
           )
           .slice(-4)
           .map((j) => (
-            <p key={j.id}>
+            <p key={j.id} className="worker-job">
               {j.task.replaceAll("_", " ")}: {j.status}
               {j.status === "error"
                 ? " — Your helper is unavailable. Try again later."
@@ -193,7 +237,9 @@ export function PuzzlePanel({
         {room.learningNotes
           ?.filter((n) => n.sceneId === room.scene.id)
           .map((n) => (
-            <p key={n.id}>{n.text.replaceAll("**", "")}</p>
+            <p key={n.id} className="learning-note">
+              {n.text.replaceAll("**", "")}
+            </p>
           ))}
       </details>
     </section>

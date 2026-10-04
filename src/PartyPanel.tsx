@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { Mic, Volume2, Send } from "lucide-react";
+import { Mic, Volume2, VolumeX, Send } from "lucide-react";
 import type { Credentials, RoomState } from "../shared/types";
 
 export interface PartyVoice {
@@ -61,28 +61,21 @@ export function PartyPanel({
     }
   }
   const speaker = room.players.find((p) => p.id === voice.speaker);
+  const companion = room.players.find((p) => p.id !== credentials.playerId);
   return (
-    <section className="party-discussion" aria-labelledby="discussion-title">
+    <section
+      className="party-discussion"
+      id="discussion"
+      aria-labelledby="discussion-title"
+    >
       <div className="discussion-heading">
-        <div>
-          <span className="section-eyebrow">YOUR SHARED CONVERSATION</span>
-          <h2 id="discussion-title">Discuss together</h2>
-        </div>
-        <Volume2 size={20} />
+        <h2 id="discussion-title">
+          {companion ? `Talk with ${companion.name}` : "Discuss together"}
+        </h2>
+        <p>
+          Compare your evidence here. The storyteller waits while you discuss.
+        </p>
       </div>
-      <p>
-        Compare your evidence with your companion. The storyteller waits while
-        you discuss here.
-      </p>
-      <details className="negotiation-phrases">
-        <summary>Useful phrases, if you need them</summary>
-        <ul>
-          <li>“What does yours say about ___?”</li>
-          <li>“Do you mean ___ or ___?”</li>
-          <li>“I agree about ___. I’m not sure about ___ because…”</li>
-          <li>“Let me check: first ___, then ___. Is that right?”</li>
-        </ul>
-      </details>
       <div
         className="party-messages"
         ref={messages}
@@ -120,36 +113,49 @@ export function PartyPanel({
       </div>
       <form onSubmit={(e) => void discuss(e)} className="discussion-form">
         <label htmlFor="party-message">Message your companion</label>
-        <textarea
-          id="party-message"
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          maxLength={1200}
-          rows={2}
-          placeholder="I noticed… What does your record say?"
-          disabled={busy}
-        />
-        <button
-          className="primary"
-          disabled={busy || !connected || !text.trim()}
-        >
-          <Send size={16} />
-          {busy ? "Sending…" : "Send to companion"}
-        </button>
+        <div className="discussion-compose">
+          <textarea
+            id="party-message"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            maxLength={1200}
+            rows={2}
+            placeholder="I noticed… What does your record say?"
+            disabled={busy}
+          />
+          <button
+            className="primary"
+            disabled={busy || !connected || !text.trim()}
+          >
+            <Send size={16} />
+            {requestBusy ? "Sending…" : "Send"}
+          </button>
+        </div>
       </form>
       {error && (
         <p role="alert" className="discussion-error">
           {error}
         </p>
       )}
+      <details className="negotiation-phrases">
+        <summary>Useful phrases, if you need them</summary>
+        <ul>
+          <li>“What does yours say about ___?”</li>
+          <li>“Do you mean ___ or ___?”</li>
+          <li>“I agree about ___. I’m not sure about ___ because…”</li>
+          <li>“Let me check: first ___, then ___. Is that right?”</li>
+        </ul>
+      </details>
       <div className="party-voice">
         <button
-          className="subtle"
+          className={`subtle ${voice.enabled ? "on" : ""}`}
           onClick={voice.enable}
-          disabled={!connected || voice.loading}
+          disabled={
+            !connected || voice.loading || (lessonPaused && !voice.enabled)
+          }
           aria-pressed={voice.enabled}
         >
-          <Volume2 size={16} />
+          {voice.enabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
           {voice.loading
             ? "Opening audio…"
             : voice.enabled
@@ -183,7 +189,7 @@ export function PartyPanel({
               ? `${speaker.name} is speaking to the companion.`
               : voice.enabled
                 ? "You can hear your companion. Talking asks for microphone access."
-                : "Optional audio between the two of you."}
+                : "Optional audio between the two of you. The storyteller does not hear it."}
         </p>
       </div>
     </section>

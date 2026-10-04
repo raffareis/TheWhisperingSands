@@ -1,109 +1,86 @@
-import { ArrowUpRight, Compass, MessageCircle, Users } from "lucide-react";
+import { ArrowRight, ArrowUpRight } from "lucide-react";
 import { useEffect } from "react";
 import { activities } from "../shared/activities";
 import "./activity-hub.css";
 
 export default function ActivityHub() {
   useEffect(() => {
-    document.title = "Meg’s classroom · English through stories and play";
+    document.title = "Meg’s classroom · English activities";
   }, []);
   return (
     <div className="activity-hub">
       <header className="hub-header">
-        <a className="hub-brand" href="/" aria-label="Meg's classroom home">
-          <span className="hub-monogram">m.</span>
-          <span>
-            Meg’s classroom<small>ENGLISH ACTIVITIES</small>
-          </span>
+        <a className="hub-brand" href="/">
+          Meg’s classroom
         </a>
-        <a className="hub-navigation" href="/teacher">
-          Teacher desk <ArrowUpRight size={16} />
+        <a className="hub-teacher" href="/teacher">
+          Teacher desk <ArrowUpRight size={15} aria-hidden="true" />
         </a>
       </header>
       <main>
-        <section className="hub-intro" aria-labelledby="hub-title">
-          <span className="hub-index">01 / THE COLLECTION</span>
-          <h1 id="hub-title">
-            English, through
-            <br />
-            <em>stories and play.</em>
-          </h1>
+        <section className="hub-intro">
+          <h1 id="hub-title">Activities for speaking English in pairs</h1>
           <p>
-            Choose an activity. Work with a partner.
-            <br />
-            Use English to make your next move.
+            Each activity is played by two students, in English, across one or
+            more lessons. Your teacher sends each of you a private link; it
+            always brings you back to where you stopped.
           </p>
         </section>
-        <section
-          id="activities"
-          className="hub-activities"
-          aria-labelledby="activities-title"
-        >
-          <div className="hub-section-label">
-            <h2 id="activities-title">Activities</h2>
-            <span>
-              {activities.length.toString().padStart(2, "0")} AVAILABLE
-            </span>
-          </div>
+        <ol className="hub-list" aria-labelledby="hub-title">
           {activities.map((activity, index) => (
-            <article className="hub-activity" key={activity.id}>
-              <a
-                className="hub-art-link"
-                href={activity.path}
-                aria-label={`Open ${activity.title}`}
-              >
+            <li className="hub-entry" key={activity.id}>
+              <span className="hub-number" aria-hidden="true">
+                {index + 1}
+              </span>
+              <figure className="hub-plate">
                 <img
                   src={activity.image}
                   alt={activity.imageAlt}
-                  fetchPriority="high"
+                  width={1536}
+                  height={1024}
+                  fetchPriority={index === 0 ? "high" : "auto"}
                 />
-                <span className="hub-art-label">
-                  FIELD NOTES / {String(index + 1).padStart(2, "0")}
-                </span>
-              </a>
-              <div className="hub-activity-copy">
-                <span className="hub-category">{activity.category}</span>
-                <h3>
+              </figure>
+              <div className="hub-entry-text">
+                <p className="hub-kicker">{activity.category}</p>
+                <h2>
                   <a href={activity.path}>{activity.title}</a>
-                </h3>
-                <p>{activity.description}</p>
-                <ul className="hub-facts" aria-label="Activity details">
-                  <li>
-                    <Users size={16} />
-                    {activity.players}
-                  </li>
-                  <li>
-                    <MessageCircle size={16} />
-                    {activity.language}
-                  </li>
-                  <li>
-                    <Compass size={16} />
-                    {activity.modes}
-                  </li>
-                </ul>
-                <a className="hub-launch" href={activity.path}>
-                  Open the adventure <ArrowUpRight size={19} />
+                </h2>
+                <p className="hub-description">{activity.description}</p>
+                <dl className="hub-facts">
+                  <div>
+                    <dt>Players</dt>
+                    <dd>{activity.players}</dd>
+                  </div>
+                  <div>
+                    <dt>Language</dt>
+                    <dd>{activity.language}</dd>
+                  </div>
+                  <div>
+                    <dt>Play by</dt>
+                    <dd>{activity.modes}</dd>
+                  </div>
+                </dl>
+                <a className="hub-open" href={activity.path}>
+                  Open the activity <ArrowRight size={18} aria-hidden="true" />
                 </a>
-                <small className="hub-invitation">
-                  Play with a partner. Teachers can organise pairs in the
-                  Teacher desk.
-                </small>
+                <p className="hub-return">
+                  Already playing? Open your private link instead. It returns
+                  you to your own seat.
+                </p>
               </div>
-            </article>
+            </li>
           ))}
-        </section>
-        <aside className="hub-next">
-          <span className="hub-index">A GROWING COLLECTION</span>
-          <p>
-            This is the first activity in Meg’s classroom.
-            <br />
-            New activities will appear here.
+        </ol>
+        {activities.length === 1 && (
+          <p className="hub-later">
+            {activities[0].title} is the first activity here. New ones will be
+            added to this list.
           </p>
-        </aside>
+        )}
       </main>
       <footer className="hub-footer">
-        <span>Meg’s classroom</span>
-        <span>Made for conversation.</span>
+        Meg’s classroom · English activities
       </footer>
     </div>
   );

@@ -5,6 +5,7 @@ import {
   LockKeyhole,
   Plus,
   RefreshCw,
+  X,
 } from "lucide-react";
 import { HostAccess } from "./HostAccess";
 import type {
@@ -29,16 +30,51 @@ async function request<T>(path: string, value?: unknown): Promise<T> {
   if (!r.ok) throw new Error(data.error ?? "This change could not be saved.");
   return data;
 }
+function day(value: string) {
+  return new Date(value.length === 10 ? value + "T12:00:00" : value);
+}
 function when(value: string) {
   return value
-    ? new Date(
-        value.length === 10 ? value + "T12:00:00" : value,
-      ).toLocaleDateString("en-GB", {
+    ? day(value).toLocaleDateString("en-GB", {
         day: "numeric",
         month: "short",
         year: "numeric",
       })
     : "Not scheduled";
+}
+function today() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+/** Next-lesson date as the teacher reads it: relative when close, flagged when past. */
+function upcoming(value: string) {
+  if (!value) return { text: "No date yet", tone: "none" };
+  const days = Math.round(
+    (day(value).getTime() - day(today()).getTime()) / 86400000,
+  );
+  const date = day(value).toLocaleDateString("en-GB", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  });
+  if (days < 0) return { text: `${date} · date passed`, tone: "past" };
+  if (days === 0) return { text: "Today", tone: "soon" };
+  if (days === 1) return { text: "Tomorrow", tone: "soon" };
+  if (days < 7) return { text: date, tone: "soon" };
+  return { text: date, tone: "later" };
+}
+function stage(t: TeachingTable) {
+  if (t.status === "archived") return "Archived";
+  if (t.status === "paused") return "Paused";
+  if (t.phase === "complete") return "Completed";
+  if (t.phase === "lobby") return "Not started";
+  return "Open";
+}
+function pair(t: TeachingTable) {
+  return t.students.map((s) => s.name).join(" & ") || "No students yet";
+}
+function character(id: "sam" | "liz") {
+  return id === "sam" ? "Sam" : "Liz";
 }
 export default function TeacherDesk() {
   const [access, setAccess] = useState<boolean | null>(null),
@@ -59,6 +95,7 @@ export default function TeacherDesk() {
     [error, setError] = useState(""),
     [notice, setNotice] = useState("");
   const hostRun = useRef<Promise<unknown> | null>(null);
+  const detail = useRef<HTMLElement>(null);
   const table = tables.find((t) => t.id === selected);
   async function refresh() {
     const data = await request<{ tables: TeachingTable[] }>("/api/teaching");
@@ -116,6 +153,15 @@ export default function TeacherDesk() {
       clearInterval(timer);
     };
   }, [access]);
+  // On a narrow screen the detail sits below the list: bring it into view.
+  function reveal() {
+    requestAnimationFrame(() => {
+      const el = detail.current;
+      if (!el || !matchMedia("(max-width: 860px)").matches) return;
+      el.focus({ preventScroll: true });
+      el.scrollIntoView({ block: "start" });
+    });
+  }
   function choose(t: TeachingTable) {
     setSelected(t.id);
     setDraft({
@@ -126,6 +172,7 @@ export default function TeacherDesk() {
     });
     setCreating(false);
     setNotice("");
+    reveal();
   }
   async function perform(action: () => Promise<void>) {
     setBusy(true);
@@ -207,47 +254,77 @@ export default function TeacherDesk() {
         .toLowerCase()
         .includes(search.toLowerCase()),
   );
-  function fields(
+  // The register: one group per class, soonest lesson first, undated last.
+  const groups = [...new Set(visible.map((t) => t.cohort))]
+    .sort((a, b) => (!a ? 1 : !b ? -1 : a.localeCompare(b)))
+    .map((name) => ({
+      name,
+      rows: visible
+        .filter((t) => t.cohort === name)
+        .sort((a, b) =>
+          (a.nextLesson || "9999").localeCompare(b.nextLesson || "9999"),
+        ),
+    }));
+  const current = tables.filter((t) => t.status !== "archived");
+  const next = current
+    .filter((t) => t.nextLesson && t.nextLesson >= today())
+    .sort((a, b) => a.nextLesson.localeCompare(b.nextLesson))[0];
+  const open = current.filter((t) => t.status === "active").length;
+  const paused = current.filter((t) => t.status === "paused").length;
+  const classes = [
+    ...new Set(tables.map((t) => t.cohort).filter(Boolean)),
+  ].sort();
+  function nameFields(
+    value: LessonDetails,
+    change: (patch: Partial<LessonDetails>) => void,
+    prefix: string,
+  ) {
+    return (
+      <div className="desk-field-pair">
+        <div>
+          <label htmlFor={`${prefix}-title`}>Adventure name</label>
+          <input
+            id={`${prefix}-title`}
+            required
+            maxLength={100}
+            value={value.title}
+            onChange={(e) => change({ title: e.target.value })}
+            placeholder="Ana & Bruno · Island mystery"
+          />
+        </div>
+        <div>
+          <label htmlFor={`${prefix}-cohort`}>Class or group</label>
+          <input
+            id={`${prefix}-cohort`}
+            maxLength={100}
+            value={value.cohort}
+            onChange={(e) => change({ cohort: e.target.value })}
+            placeholder="Tuesday · B1"
+            list="desk-classes"
+          />
+        </div>
+      </div>
+    );
+  }
+  function planFields(
     value: LessonDetails,
     change: (patch: Partial<LessonDetails>) => void,
     prefix: string,
   ) {
     return (
       <>
-        <label htmlFor={`${prefix}-title`}>Adventure name</label>
+        <label htmlFor={`${prefix}-date`}>Next lesson date</label>
         <input
-          id={`${prefix}-title`}
-          required
-          maxLength={100}
-          value={value.title}
-          onChange={(e) => change({ title: e.target.value })}
-          placeholder="Ana & Bruno · Island mystery"
+          id={`${prefix}-date`}
+          className="desk-date"
+          type="date"
+          value={value.nextLesson}
+          onChange={(e) => change({ nextLesson: e.target.value })}
         />
-        <div className="desk-field-pair">
-          <div>
-            <label htmlFor={`${prefix}-cohort`}>Class or group</label>
-            <input
-              id={`${prefix}-cohort`}
-              maxLength={100}
-              value={value.cohort}
-              onChange={(e) => change({ cohort: e.target.value })}
-              placeholder="Tuesday · B1"
-            />
-          </div>
-          <div>
-            <label htmlFor={`${prefix}-date`}>Next lesson</label>
-            <input
-              id={`${prefix}-date`}
-              type="date"
-              value={value.nextLesson}
-              onChange={(e) => change({ nextLesson: e.target.value })}
-            />
-          </div>
-        </div>
         <label htmlFor={`${prefix}-notes`}>Private teaching notes</label>
         <textarea
           id={`${prefix}-notes`}
-          rows={4}
+          rows={5}
           maxLength={6000}
           value={value.notes}
           onChange={(e) => change({ notes: e.target.value })}
@@ -261,11 +338,11 @@ export default function TeacherDesk() {
     <div className="teacher-desk">
       <header className="desk-header">
         <a className="desk-brand" href="/">
-          m. <span>Meg’s classroom</span>
+          Meg’s classroom
         </a>
-        <nav>
+        <nav aria-label="Teacher desk">
           <a href="/">
-            All activities <ArrowUpRight size={15} />
+            Activities <ArrowUpRight size={15} aria-hidden="true" />
           </a>
           {access && (
             <button
@@ -280,38 +357,35 @@ export default function TeacherDesk() {
                 })
               }
             >
-              <LockKeyhole size={15} />
+              <LockKeyhole size={15} aria-hidden="true" />
               Lock desk
             </button>
           )}
         </nav>
       </header>
       <main>
-        <div className="desk-intro">
-          <div>
-            <span className="small-caps">FOR THE TEACHER</span>
-            <h1>
-              Your classes,
-              <br />
-              <em>one lesson at a time.</em>
-            </h1>
-            <p>
-              Keep each pair’s adventure across lessons. Pause today; pick up
-              here next week.
-            </p>
-          </div>
+        <div className="desk-summary">
+          <h1>Teacher desk</h1>
           {access && (
-            <button
-              className="primary"
-              onClick={() => {
-                setCreating(true);
-                setSelected("");
-                setNotice("");
-              }}
-            >
-              <Plus size={17} />
-              New pair
-            </button>
+            <p>
+              {current.length === 0
+                ? "No pairs yet."
+                : `${current.length} current ${current.length === 1 ? "pair" : "pairs"} · ${open} open · ${paused} paused`}
+              {next && (
+                <>
+                  {" "}
+                  <span className="desk-next-up">
+                    Next lesson: {upcoming(next.nextLesson).text},{" "}
+                    <button
+                      className="desk-inline-link"
+                      onClick={() => choose(next)}
+                    >
+                      {pair(next)}
+                    </button>
+                  </span>
+                </>
+              )}
+            </p>
           )}
         </div>
         {error && (
@@ -325,14 +399,16 @@ export default function TeacherDesk() {
           </p>
         )}
         {access === null ? (
-          <p>Opening teacher access…</p>
+          <p className="desk-opening">Opening teacher access…</p>
         ) : !access ? (
-          <HostAccess
-            onReady={() => {
-              setAccess(true);
-              setError("");
-            }}
-          />
+          <div className="desk-locked">
+            <HostAccess
+              onReady={() => {
+                setAccess(true);
+                setError("");
+              }}
+            />
+          </div>
         ) : (
           <>
             <section className="desk-filters" aria-label="Find teaching tables">
@@ -343,11 +419,9 @@ export default function TeacherDesk() {
                   onChange={(e) => setCohort(e.target.value)}
                 >
                   <option value="">All classes</option>
-                  {[...new Set(tables.map((t) => t.cohort).filter(Boolean))]
-                    .sort()
-                    .map((c) => (
-                      <option key={c}>{c}</option>
-                    ))}
+                  {classes.map((c) => (
+                    <option key={c}>{c}</option>
+                  ))}
                 </select>
               </label>
               <label>
@@ -380,76 +454,139 @@ export default function TeacherDesk() {
                   })
                 }
               >
-                <RefreshCw size={16} />
+                <RefreshCw size={16} aria-hidden="true" />
                 Refresh
               </button>
+              <button
+                className="primary desk-new"
+                onClick={() => {
+                  setCreating(true);
+                  setSelected("");
+                  setNotice("");
+                  reveal();
+                }}
+              >
+                <Plus size={17} aria-hidden="true" />
+                New pair
+              </button>
             </section>
+            <datalist id="desk-classes">
+              {classes.map((c) => (
+                <option key={c} value={c} />
+              ))}
+            </datalist>
             <div className="desk-layout">
               <section className="desk-list" aria-label="Teaching adventures">
                 <div className="desk-list-heading">
-                  <span>ADVENTURES</span>
+                  <span>Pairs</span>
                   <span>{visible.length}</span>
                 </div>
                 {visible.length ? (
-                  visible.map((t) => (
-                    <button
-                      key={t.id}
-                      className={`desk-table ${selected === t.id ? "selected" : ""}`}
-                      onClick={() => choose(t)}
-                    >
-                      <span className={`desk-status ${t.status}`}>
-                        {t.phase === "complete" && t.status === "active"
-                          ? "Completed"
-                          : t.status}
-                      </span>
-                      <h2>{t.title}</h2>
-                      <p>
-                        {t.cohort || "No class assigned"} ·{" "}
-                        {t.students.map((s) => s.name).join(" & ")}
-                      </p>
-                      <div className="desk-progress">
-                        <span
-                          style={{ width: `${(t.solved / t.total) * 100}%` }}
-                        />
-                      </div>
-                      <small>
-                        {t.solved}/{t.total} puzzles · {t.chapterTitle}
-                      </small>
-                      <strong>Next: {when(t.nextLesson)}</strong>
-                    </button>
+                  groups.map((group) => (
+                    <div className="desk-group" key={group.name || "none"}>
+                      <h2>{group.name || "No class assigned"}</h2>
+                      <ul>
+                        {group.rows.map((t) => {
+                          const date = upcoming(t.nextLesson);
+                          return (
+                            <li key={t.id}>
+                              <button
+                                className={`desk-table ${t.status} ${selected === t.id ? "selected" : ""}`}
+                                aria-current={
+                                  selected === t.id ? "true" : undefined
+                                }
+                                onClick={() => choose(t)}
+                              >
+                                <strong className="desk-pair">{pair(t)}</strong>
+                                {t.title !== pair(t) && (
+                                  <span className="desk-row-title">
+                                    {t.title}
+                                  </span>
+                                )}
+                                <span className="desk-row-meta">
+                                  <span
+                                    className={`desk-status ${t.status} ${t.phase}`}
+                                  >
+                                    {stage(t)}
+                                  </span>
+                                  <span
+                                    className="desk-meter"
+                                    aria-label={`${t.solved} of ${t.total} puzzles solved`}
+                                  >
+                                    {Array.from({ length: t.total }, (_, i) => (
+                                      <i
+                                        key={i}
+                                        className={i < t.solved ? "done" : ""}
+                                      />
+                                    ))}
+                                  </span>
+                                  <span className={`desk-when ${date.tone}`}>
+                                    {date.text}
+                                  </span>
+                                </span>
+                              </button>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </div>
                   ))
                 ) : (
                   <div className="desk-empty">
-                    <h2>A home for every pair.</h2>
-                    <p>
-                      Create a table, name the two students and send their
-                      private links. Their progress stays here between lessons.
-                    </p>
+                    {tables.length ? (
+                      <p>No pair matches these filters.</p>
+                    ) : (
+                      <p>
+                        Create a pair with <strong>New pair</strong>: name the
+                        two students, then send each one their private link.
+                        Their progress stays here between lessons.
+                      </p>
+                    )}
                   </div>
                 )}
               </section>
               <section
-                className="desk-detail"
+                ref={detail}
+                tabIndex={-1}
+                className={`desk-detail ${creating ? "creating" : ""}`}
                 aria-label={
-                  creating ? "Create teaching table" : "Selected adventure"
+                  creating
+                    ? "Create teaching table"
+                    : table
+                      ? `${table.title}, selected adventure`
+                      : "Selected adventure"
                 }
               >
                 {creating ? (
                   <form onSubmit={(e) => void create(e)}>
-                    <span className="small-caps">A NEW ADVENTURE</span>
-                    <h2>Reserve both seats.</h2>
-                    <p>
+                    <div className="desk-detail-head">
+                      <div>
+                        <span className="desk-kicker">New pair</span>
+                        <h2>Reserve both seats</h2>
+                      </div>
+                      <button
+                        type="button"
+                        className="subtle desk-close"
+                        onClick={() => setCreating(false)}
+                      >
+                        <X size={15} aria-hidden="true" />
+                        Cancel
+                      </button>
+                    </div>
+                    <p className="desk-lead">
                       You manage the lesson without taking a player’s character.
                     </p>
                     <fieldset disabled={busy}>
-                      {fields(
-                        newDraft,
-                        (p) => setNewDraft((d) => ({ ...d, ...p })),
-                        "new",
-                      )}
-                      <div className="desk-field-pair">
+                      <div className="desk-field-pair desk-seats">
                         <div>
-                          <label htmlFor="new-sam">Student playing Sam</label>
+                          <label htmlFor="new-sam">
+                            <img
+                              src="/art/sam-sunburst.webp"
+                              alt=""
+                              loading="lazy"
+                            />
+                            Student playing Sam
+                          </label>
                           <input
                             id="new-sam"
                             required={!newDraft.existingRoomId}
@@ -464,7 +601,14 @@ export default function TeacherDesk() {
                           />
                         </div>
                         <div>
-                          <label htmlFor="new-liz">Student playing Liz</label>
+                          <label htmlFor="new-liz">
+                            <img
+                              src="/art/liz-sunburst.webp"
+                              alt=""
+                              loading="lazy"
+                            />
+                            Student playing Liz
+                          </label>
                           <input
                             id="new-liz"
                             required={!newDraft.existingRoomId}
@@ -479,6 +623,16 @@ export default function TeacherDesk() {
                           />
                         </div>
                       </div>
+                      {nameFields(
+                        newDraft,
+                        (p) => setNewDraft((d) => ({ ...d, ...p })),
+                        "new",
+                      )}
+                      {planFields(
+                        newDraft,
+                        (p) => setNewDraft((d) => ({ ...d, ...p })),
+                        "new",
+                      )}
                       <details className="desk-import">
                         <summary>Bring an existing adventure</summary>
                         <label htmlFor="existing-room">
@@ -508,70 +662,124 @@ export default function TeacherDesk() {
                   </form>
                 ) : table ? (
                   <>
-                    <span className="small-caps">
-                      {table.cohort || "YOUR CLASSROOM"}
-                    </span>
-                    <h2>{table.title}</h2>
-                    <div className="desk-metrics">
+                    <div className="desk-detail-head">
                       <div>
-                        <strong>
-                          {table.solved}/{table.total}
-                        </strong>
-                        <span>Puzzles solved</span>
+                        <span className="desk-kicker">
+                          {table.cohort || "No class assigned"} ·{" "}
+                          <span
+                            className={`desk-status ${table.status} ${table.phase}`}
+                          >
+                            {stage(table)}
+                          </span>
+                        </span>
+                        <h2>{table.title}</h2>
                       </div>
-                      <div>
-                        <strong>{table.hints}</strong>
-                        <span>Hints requested</span>
-                      </div>
-                      <div>
-                        <strong>{table.attempts}</strong>
-                        <span>Answer attempts</span>
+                      <div className="desk-lesson-actions">
+                        {table.status === "active" ? (
+                          <button
+                            className="primary"
+                            disabled={busy}
+                            onClick={() => void save("paused")}
+                          >
+                            End this lesson · pause
+                          </button>
+                        ) : (
+                          <button
+                            className="primary"
+                            disabled={busy}
+                            onClick={() => void save("active")}
+                          >
+                            Reopen for next lesson
+                          </button>
+                        )}
+                        {table.status !== "archived" && (
+                          <button
+                            className="subtle"
+                            disabled={busy}
+                            onClick={() => void save("archived")}
+                          >
+                            Archive adventure
+                          </button>
+                        )}
                       </div>
                     </div>
-                    <div className="desk-lesson-actions">
-                      {table.status === "active" ? (
-                        <button
-                          className="primary"
-                          disabled={busy}
-                          onClick={() => void save("paused")}
-                        >
-                          End this lesson · pause
-                        </button>
-                      ) : (
-                        <button
-                          className="primary"
-                          disabled={busy}
-                          onClick={() => void save("active")}
-                        >
-                          Reopen for next lesson
-                        </button>
-                      )}
-                      {table.status !== "archived" && (
-                        <button
-                          className="subtle"
-                          disabled={busy}
-                          onClick={() => void save("archived")}
-                        >
-                          Archive adventure
-                        </button>
-                      )}
+                    <div className="desk-continuity">
+                      <section
+                        className="desk-recap"
+                        aria-labelledby="desk-recap-title"
+                      >
+                        <h3 id="desk-recap-title">Where the story stopped</h3>
+                        <p className="desk-chapter">
+                          {table.chapterTitle} · last activity{" "}
+                          {when(table.lastPlayedAt)}
+                        </p>
+                        <blockquote tabIndex={0} aria-label="Story recap">
+                          {table.recap}
+                        </blockquote>
+                        <dl className="desk-metrics">
+                          <div>
+                            <dt>Puzzles solved</dt>
+                            <dd>
+                              {table.solved}/{table.total}
+                            </dd>
+                          </div>
+                          <div>
+                            <dt>Hints requested</dt>
+                            <dd>{table.hints}</dd>
+                          </div>
+                          <div>
+                            <dt>Answer attempts</dt>
+                            <dd>{table.attempts}</dd>
+                          </div>
+                        </dl>
+                      </section>
+                      <form
+                        className="desk-plan"
+                        aria-labelledby="desk-plan-title"
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          void save();
+                        }}
+                      >
+                        <h3 id="desk-plan-title">Plan the next lesson</h3>
+                        <fieldset disabled={busy}>
+                          {planFields(
+                            draft,
+                            (p) => setDraft((d) => ({ ...d, ...p })),
+                            "edit",
+                          )}
+                          {nameFields(
+                            draft,
+                            (p) => setDraft((d) => ({ ...d, ...p })),
+                            "edit",
+                          )}
+                          <button className="primary" type="submit">
+                            Save teaching notes
+                          </button>
+                        </fieldset>
+                      </form>
                     </div>
                     <section
                       className="desk-links"
-                      aria-label="Private student links"
+                      aria-labelledby="desk-links-title"
                     >
-                      <h3>Each student keeps their own link.</h3>
+                      <h3 id="desk-links-title">Private student links</h3>
                       <p>
-                        Links continue to work next week and on another device.
+                        Each link keeps working next week and on another device.
                         Opening one replaces that student’s previous connection.
                       </p>
                       {table.students.map((student) => (
                         <div className="desk-student" key={student.character}>
-                          <div>
+                          <img
+                            className="desk-portrait"
+                            src={`/art/${student.character}-sunburst.webp`}
+                            alt=""
+                            loading="lazy"
+                          />
+                          <div className="desk-student-name">
                             <strong>{student.name}</strong>
                             <small>
-                              Playing{" "}
-                              {student.character === "sam" ? "Sam" : "Liz"}
+                              Playing {character(student.character)}
                             </small>
                           </div>
                           <button
@@ -581,7 +789,7 @@ export default function TeacherDesk() {
                               void copy(student.entryPath, student.name)
                             }
                           >
-                            <Clipboard size={15} />
+                            <Clipboard size={15} aria-hidden="true" />
                             Copy link
                           </button>
                           <input
@@ -622,37 +830,12 @@ export default function TeacherDesk() {
                         </div>
                       ))}
                     </section>
-                    <details className="desk-recap">
-                      <summary>Where the story stopped</summary>
-                      <p>{table.recap}</p>
-                      <small>
-                        Last table activity: {when(table.lastPlayedAt)}
-                      </small>
-                    </details>
-                    <form
-                      onSubmit={(e) => {
-                        e.preventDefault();
-                        void save();
-                      }}
-                    >
-                      <fieldset disabled={busy}>
-                        {fields(
-                          draft,
-                          (p) => setDraft((d) => ({ ...d, ...p })),
-                          "edit",
-                        )}
-                        <button className="primary" type="submit">
-                          Save teaching notes
-                        </button>
-                      </fieldset>
-                    </form>
                   </>
                 ) : (
-                  <div className="desk-empty">
-                    <h2>Plan the next lesson.</h2>
+                  <div className="desk-empty desk-placeholder">
                     <p>
-                      Select a pair to see their progress, save your notes and
-                      find their return links.
+                      Select a pair to see where their story stopped, plan the
+                      next lesson and copy their return links.
                     </p>
                   </div>
                 )}

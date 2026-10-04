@@ -43,71 +43,60 @@ export function Inventory({ items, owner }: { items: Item[]; owner: string }) {
   const count = items.reduce((total, item) => total + item.quantity, 0);
   return (
     <section className="inventory" aria-label={`${owner}'s inventory`}>
-      <div className="inventory-title">
-        <span>Carried objects</span>
-        <small>
-          {count} {count === 1 ? "item" : "items"}
-        </small>
-      </div>
-      <div className="inventory-list">
-        {items.length ? (
-          items.map((item, index) => {
+      <h3 className="inventory-title">
+        Carried objects <small>{count}</small>
+      </h3>
+      {items.length ? (
+        <ul className="inventory-list">
+          {items.map((item) => {
             const art = objectArt[item.id];
             return (
-              <details className="specimen" key={item.id}>
-                <summary>
-                  <span className={`specimen-art ${art ? "" : "unrecorded"}`}>
-                    <span className="specimen-number" aria-hidden="true">
-                      {String(index + 1).padStart(2, "0")}
-                    </span>
-                    {art ? (
-                      "cell" in art ? (
-                        <span
-                          className="inventory-specimen-cell"
-                          aria-hidden="true"
-                          style={{
-                            backgroundPosition: `${art.cell[0] * 50}% ${art.cell[1] * 50}%`,
-                          }}
-                        />
+              <li key={item.id}>
+                <details className="specimen">
+                  <summary>
+                    <span className={`specimen-art ${art ? "" : "unrecorded"}`}>
+                      {art ? (
+                        "cell" in art ? (
+                          <span
+                            className="inventory-specimen-cell"
+                            aria-hidden="true"
+                            style={{
+                              backgroundPosition: `${art.cell[0] * 50}% ${art.cell[1] * 50}%`,
+                            }}
+                          />
+                        ) : (
+                          <img src={art.path} alt="" loading="lazy" />
+                        )
                       ) : (
-                        <img src={art.path} alt="" loading="lazy" />
-                      )
-                    ) : (
-                      <PackageOpen
-                        size={36}
-                        strokeWidth={1}
-                        aria-hidden="true"
-                      />
+                        <PackageOpen
+                          size={26}
+                          strokeWidth={1}
+                          aria-hidden="true"
+                        />
+                      )}
+                    </span>
+                    <span className="specimen-label">
+                      <strong>{item.name}</strong>
+                      <small>{art?.label ?? "Collected in the field"}</small>
+                    </span>
+                    {item.quantity > 1 && (
+                      <span className="specimen-quantity">
+                        ×{item.quantity}
+                      </span>
                     )}
-                    <span className="specimen-quantity">×{item.quantity}</span>
-                  </span>
-                  <span className="specimen-label">
-                    <strong>{item.name}</strong>
-                    <ChevronDown size={15} />
-                  </span>
-                  <span className="specimen-material">
-                    {art?.label ?? "Collected in the field"}
-                  </span>
-                  <span className="specimen-inspect">Examine object</span>
-                </summary>
-                <div className="specimen-description">
-                  <span>FIELD NOTE</span>
-                  <p>{item.description}</p>
-                </div>
-              </details>
+                    <ChevronDown size={15} aria-hidden="true" />
+                  </summary>
+                  <p className="specimen-description">{item.description}</p>
+                </details>
+              </li>
             );
-          })
-        ) : (
-          <div className="empty-inventory">
-            <PackageOpen size={27} strokeWidth={1} />
-            <p>
-              No objects carried.
-              <br />
-              Finds from the island will appear here.
-            </p>
-          </div>
-        )}
-      </div>
+          })}
+        </ul>
+      ) : (
+        <p className="empty-inventory">
+          No objects carried yet. Finds from the island will appear here.
+        </p>
+      )}
     </section>
   );
 }
