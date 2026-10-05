@@ -167,6 +167,11 @@ Os códigos individuais são armazenados como hashes e também cifrados para que
 a professora possa copiar seus links novamente. A cifra usa HOST_ACCESS_KEY;
 preserve essa configuração privada junto do banco entre releases. A migração
 adiciona tabelas sem alterar as partidas antigas. Gestão e prova: #7.
+O guia da professora fica em `/guide` (`src/Guide.tsx`, mídia em `public/guide/`),
+com link **Guide** no painel. Capturas e vídeo são gerados no repo
+[Meg Classroom](https://github.com/raffareis/meg-classroom/tree/main/tutorial)
+com dados fictícios e mestre roteirizado, sem IA paga; o servidor entrega o MP4
+com byte ranges, exigidos pelo Safari do iPhone.
 `bin/check-teaching.ts` verifica o fluxo HTTP/WS sem chamadas de IA; use uma
 chave privada, `APP_URL` e `TEACHING_REPORT` para checkpoints separados.
 

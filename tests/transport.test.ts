@@ -117,8 +117,30 @@ for (const mode of ["production", "development"] as const)
           404,
         );
         if (mode === "production" && existsSync("output/web/index.html")) {
-          for (const path of ["/", "/whispering-sands?room=test#recover=code"])
+          for (const path of [
+            "/",
+            "/guide",
+            "/whispering-sands?room=test#recover=code",
+          ])
             assert.equal((await fetch(base + path)).status, 200);
+          if (existsSync("output/web/guide/teacher-guide.mp4")) {
+            // Mobile Safari needs byte ranges to play the tutorial video.
+            const video = "/guide/teacher-guide.mp4";
+            const part = await fetch(base + video, {
+              headers: { Range: "bytes=0-99" },
+            });
+            assert.equal(part.status, 206);
+            assert.equal(part.headers.get("accept-ranges"), "bytes");
+            assert.match(
+              part.headers.get("content-range")!,
+              /^bytes 0-99\/\d+$/,
+            );
+            assert.equal((await part.arrayBuffer()).byteLength, 100);
+            const outside = await fetch(base + video, {
+              headers: { Range: "bytes=999999999-" },
+            });
+            assert.equal(outside.status, 416);
+          }
         }
         const created = await api("/api/rooms", {
           name: "Rafael",

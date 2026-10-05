@@ -349,6 +349,7 @@ export default function TeacherDesk() {
           Meg’s classroom
         </a>
         <nav aria-label="Teacher desk">
+          <a href="/guide">Guide</a>
           <a href="/">
             Activities <ArrowUpRight size={15} aria-hidden="true" />
           </a>

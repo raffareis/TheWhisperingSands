@@ -3,7 +3,13 @@ import {
   type IncomingMessage,
   type ServerResponse,
 } from "node:http";
-import { existsSync, readFileSync, statSync, realpathSync } from "node:fs";
+import {
+  createReadStream,
+  existsSync,
+  readFileSync,
+  statSync,
+  realpathSync,
+} from "node:fs";
 import { resolve, extname } from "node:path";
 import { WebSocketServer, WebSocket } from "ws";
 import { z } from "zod";
@@ -408,6 +414,8 @@ const server = createServer(async (req, res) => {
           "/",
           "/teacher",
           "/teacher/",
+          "/guide",
+          "/guide/",
           "/whispering-sands",
           "/whispering-sands/",
         ].includes(url.pathname)
@@ -431,6 +439,8 @@ const server = createServer(async (req, res) => {
       "/",
       "/teacher",
       "/teacher/",
+      "/guide",
+      "/guide/",
       "/whispering-sands",
       "/whispering-sands/",
     ].includes(url.pathname)
@@ -449,10 +459,39 @@ const server = createServer(async (req, res) => {
       ".svg": "image/svg+xml",
       ".png": "image/png",
       ".webp": "image/webp",
+      ".mp4": "video/mp4",
     };
+    const type = contentTypes[extname(target)] ?? "application/octet-stream";
+    if (type === "video/mp4") {
+      // iOS Safari only plays video served with byte ranges.
+      const size = statSync(target).size;
+      const range = /^bytes=(\d*)-(\d*)$/.exec(req.headers.range ?? "");
+      let start = 0;
+      let end = size - 1;
+      if (range) {
+        start = range[1]
+          ? Number(range[1])
+          : Math.max(size - Number(range[2]), 0);
+        end = range[1] && range[2] ? Math.min(Number(range[2]), size - 1) : end;
+        if (start > end || start >= size) {
+          res.writeHead(416, { "Content-Range": `bytes */${size}` });
+          res.end();
+          return;
+        }
+      }
+      res.writeHead(range ? 206 : 200, {
+        "Content-Type": type,
+        "Content-Length": end - start + 1,
+        "Accept-Ranges": "bytes",
+        ...(range ? { "Content-Range": `bytes ${start}-${end}/${size}` } : {}),
+        "X-Content-Type-Options": "nosniff",
+      });
+      if (req.method === "HEAD") res.end();
+      else createReadStream(target, { start, end }).pipe(res);
+      return;
+    }
     res.writeHead(200, {
-      "Content-Type":
-        contentTypes[extname(target)] ?? "application/octet-stream",
+      "Content-Type": type,
       "X-Content-Type-Options": "nosniff",
     });
     res.end(readFileSync(target));
