@@ -11,7 +11,9 @@ archive="output/releases/$release.tar"
 git archive --format=tar --output="$archive" HEAD
 ssh marvin-dell "mkdir -p '$release_dir'; test -f /home/marvin/.config/whispering-sands/server.env"
 scp -q "$archive" "marvin-dell:$release_dir/source.tar"
-ssh marvin-dell "cd '$release_dir'; tar -xf source.tar; taskctl start --cpus 2 --memory-mb 2048 --timeout 180 -- bash -c 'npm ci && npm run build'"
+# Build medido com pico de 456 MB (2026-10-04); 2048 MB ficava preso na fila do Dell,
+# que tem ~1,7 GB livres com os serviços no ar (2026-10-05).
+ssh marvin-dell "cd '$release_dir'; tar -xf source.tar; taskctl start --cpus 2 --memory-mb 1024 --timeout 180 -- bash -c 'npm ci && npm run build'"
 printf 'Release staged: %s\nWait for the remote task ID above, then activate:\n' "$release"
 printf 'ssh marvin-dell "ln -sfn %s /home/marvin/apps/meg/next; mv -Tf /home/marvin/apps/meg/next /home/marvin/apps/meg/current"\n' "$release_dir"
 printf "publicar-app servico meg 4317 /home/marvin/apps/meg/current -- 'env NODE_ENV=production OPENAI_ENV_FILE=/home/marvin/.config/whispering-sands/server.env ./bin/dev'\n"
