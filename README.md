@@ -66,8 +66,8 @@ OPENAI_ENV_FILE=/caminho/privado/.env ./bin/dev
 ```
 
 Os padrões configuráveis são `gpt-realtime-2.1` para voz, `gpt-4.1` para texto
-sem uma sessão de voz ativa e `gpt-image-2.5-flare` para ilustrações. Voz e imagens
-utilizam a API paga. O banco preparado usa `gpt-image-2.5-sunburst`; durante a
+sem uma sessão de voz ativa e `gpt-image-2.6-flare` para ilustrações (2.5 até 2026-11-04; mesmo preço e qualidade, cerca de 50% mais rápida). Voz e imagens
+utilizam a API paga. O banco preparado foi gerado com `gpt-image-2.5-sunburst`; novos assets base usam `gpt-image-2.6-sunburst`. Durante a
 partida o Flare compõe novas cenas a partir dessas imagens de referência.
 É possível pausar novas ilustrações nas configurações da mesa. O servidor limita
 cada sala a 24 tentativas de imagem por hora e a instalação a 120; os limites
@@ -478,8 +478,8 @@ Documentação: [Klein 4B](https://fal.ai/models/fal-ai/flux-2/klein/4b/edit/api
 
 Referências consultadas: [conversas Realtime](https://developers.openai.com/api/docs/guides/realtime-conversations),
 [imagens e referências](https://developers.openai.com/api/docs/guides/image-generation),
-[Flare](https://developers.openai.com/api/docs/models/gpt-image-2.5-flare),
-[Sunburst](https://developers.openai.com/api/docs/models/gpt-image-2.5-sunburst),
+[Flare](https://developers.openai.com/api/docs/models/gpt-image-2.6-flare),
+[Sunburst](https://developers.openai.com/api/docs/models/gpt-image-2.6-sunburst),
 [worker nano](https://developers.openai.com/api/docs/models/gpt-5.4-nano),
 [TypeSafe HTTP](https://docs.typesafe.ai/api),
 [Choice](https://docs.typesafe.ai/primitives/choice) e

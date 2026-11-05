@@ -37,7 +37,7 @@ const settings: Settings = {
   key: process.env.OPENAI_API_KEY ?? "",
   textModel: process.env.OPENAI_TEXT_MODEL ?? "gpt-4.1",
   realtimeModel: process.env.OPENAI_REALTIME_MODEL ?? "gpt-realtime-2.1",
-  imageModel: process.env.OPENAI_IMAGE_MODEL ?? "gpt-image-2.5-flare",
+  imageModel: process.env.OPENAI_IMAGE_MODEL ?? "gpt-image-2.6-flare",
   falKey: process.env.FAL_KEY ?? "",
   workerModel: process.env.OPENAI_WORKER_MODEL ?? "gpt-5.4-nano",
   ...(process.env.SYSTEM_ONE_BASE_URL

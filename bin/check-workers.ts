@@ -22,7 +22,7 @@ const room = new RoomRuntime(store, created.state.id, {
   key,
   textModel: process.env.OPENAI_TEXT_MODEL ?? "gpt-4.1",
   realtimeModel: process.env.OPENAI_REALTIME_MODEL ?? "gpt-realtime-2.1",
-  imageModel: process.env.OPENAI_IMAGE_MODEL ?? "gpt-image-2.5-flare",
+  imageModel: process.env.OPENAI_IMAGE_MODEL ?? "gpt-image-2.6-flare",
   workerModel: process.env.OPENAI_WORKER_MODEL ?? "gpt-5.4-nano",
   dataDir: resolve(process.env.DATA_DIR ?? "data"),
 });

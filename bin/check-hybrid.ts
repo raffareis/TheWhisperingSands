@@ -34,7 +34,7 @@ const created = store.create("QA Hybrid", "sam");
 const room = new RoomRuntime(store, created.state.id, {
   key: process.env.OPENAI_API_KEY!,
   falKey: process.env.FAL_KEY!,
-  imageModel: "gpt-image-2.5-flare",
+  imageModel: "gpt-image-2.6-flare",
   realtimeModel: "gpt-realtime-2.1",
   textModel: "gpt-4.1",
   dataDir,

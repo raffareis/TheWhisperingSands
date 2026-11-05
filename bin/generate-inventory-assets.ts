@@ -28,7 +28,7 @@ const destination = resolve(root, "public/art", filename);
 const reference = resolve(root, "public/art/coastal-field-study-sunburst.webp");
 const checkpoint = resolve(output, "checkpoint.json");
 const receiptPath = resolve(output, "receipt.json");
-const model = "gpt-image-2.5-sunburst";
+const model = "gpt-image-2.6-sunburst";
 const prompt = `Use case: illustration-story
 Asset type: public inventory specimen sprite sheet for The Whispering Sands.
 Input image 1 is ONLY a painting-style reference: borrow matte gouache, graphite, warm ivory paper, olive green, sea grey, raw umber and pale ochre. Do NOT copy its landscape, coast, trees, carvings or composition.

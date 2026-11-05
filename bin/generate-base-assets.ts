@@ -15,7 +15,9 @@ const output = resolve(root, "output/imagegen-sunburst");
 const cli =
   process.env.IMAGEGEN_CLI ??
   resolve(homedir(), ".codex/skills/imagegen/scripts/image_gen.py");
-const model = "gpt-image-2.5-sunburst";
+const model = "gpt-image-2.6-sunburst";
+// Same price and quality as 2.6; existing base assets keep their 2.5 receipts.
+const acceptedReceiptModels = new Set([model, "gpt-image-2.5-sunburst"]);
 const ids = [
   "coastal-field-study",
   "shipwreck",
@@ -62,7 +64,7 @@ async function generate(id: AssetId) {
         (a: { id: string }) => a.id === id,
       )?.provenance;
       if (
-        receipt?.model !== model ||
+        !acceptedReceiptModels.has(receipt?.model) ||
         receipt.output_sha256 !== hash(outputPath(id))
       )
         throw new Error(
