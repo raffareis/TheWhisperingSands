@@ -6,15 +6,21 @@ git diff --quiet
 git diff --cached --quiet
 release=$(git rev-parse HEAD)
 release_dir="/home/marvin/apps/meg/releases/$release"
-mkdir -p output/releases
-archive="output/releases/$release.tar"
-git archive --format=tar --output="$archive" HEAD
+# O Dell só serve e recebe cópias (fora de processamento desde 2026-10-18):
+# npm ci e build rodam aqui, pelo taskctl local, e a release vai pronta.
+stage="output/releases/$release"
+archive="$stage.tar"
+rm -rf "$stage" "$archive"
+mkdir -p "$stage"
+git archive --format=tar HEAD | tar -x -C "$stage"
+taskctl run --block --cpus 2 --memory-mb 1024 --timeout 300 --motivo "build meg $release" -- \
+  bash -c "cd '$PWD/$stage' && npm ci --no-audit --no-fund && npm run build"
+tar -C "$stage" -cf "$archive" .
 ssh marvin-dell "mkdir -p '$release_dir'; test -f /home/marvin/.config/whispering-sands/server.env"
-scp -q "$archive" "marvin-dell:$release_dir/source.tar"
-# Build medido com pico de 456 MB (2026-10-04); 2048 MB ficava preso na fila do Dell,
-# que tem ~1,7 GB livres com os serviços no ar (2026-10-05).
-ssh marvin-dell "cd '$release_dir'; tar -xf source.tar; taskctl start --cpus 2 --memory-mb 1024 --timeout 180 -- bash -c 'npm ci && npm run build'"
-printf 'Release staged: %s\nWait for the remote task ID above, then activate:\n' "$release"
+scp -q "$archive" "marvin-dell:$release_dir/release.tar"
+ssh marvin-dell "cd '$release_dir' && tar -xf release.tar && rm release.tar && test -f output/web/index.html"
+rm -rf "$stage" "$archive"
+printf 'Release staged: %s\nActivate:\n' "$release"
 printf 'ssh marvin-dell "ln -sfn %s /home/marvin/apps/meg/next; mv -Tf /home/marvin/apps/meg/next /home/marvin/apps/meg/current"\n' "$release_dir"
 printf "publicar-app servico meg 4317 /home/marvin/apps/meg/current -- 'env NODE_ENV=production OPENAI_ENV_FILE=/home/marvin/.config/whispering-sands/server.env ./bin/dev'\n"
 printf 'PUBLICAR_DOMINIO=raffareis.com publicar-app publicar meg 4317\n'
